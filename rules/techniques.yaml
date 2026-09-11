@@ -1,4 +1,7 @@
-# 10 ATT&CK techniques grounded in MITRE ATT&CK (CLAUDE.md ง5)
+# 10 ATT&CK techniques grounded in MITRE ATT&CK (CLAUDE.md ยง5).
+# Placeholders: session:src|dst, admin:src|dst, creds:who (requires only; one CompiledEdge per
+# identity with a login|admin grant on dst), creds:sessions@src (grants only; every identity
+# with a session grant on src), data:src|dst.
 - id: phish
   attck: T1566
   channel: {protocol: https, port: 443}
@@ -39,7 +42,7 @@
   attck: T1552.001
   channel: null
   requires: [session:src]
-  grants: [creds:who]
+  grants: [creds:sessions@src]   # a credential file on the share = a session grant on the share
   base_success: 0.8
   cost: 1
   noise: 0.1

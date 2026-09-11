@@ -1,0 +1,759 @@
+{
+ "agents": [
+  {
+   "capabilities": [],
+   "id": "external",
+   "name": "External criminal crew",
+   "noise_budget": 3.0,
+   "objective": "specific_target",
+   "skill": 0.7,
+   "start_zones": [
+    "external"
+   ],
+   "target": "prod-db"
+  },
+  {
+   "capabilities": [
+    "creds:u.hr"
+   ],
+   "id": "insider",
+   "name": "Disgruntled HR insider",
+   "noise_budget": 2.0,
+   "objective": "specific_target",
+   "skill": 0.4,
+   "start_zones": [
+    "corp"
+   ],
+   "target": "prod-db"
+  }
+ ],
+ "catalogue": [
+  {
+   "cost": 8,
+   "id": "seg_prod_db_full",
+   "impacts": [
+    {
+     "breaks_flows": true,
+     "deny": {
+      "dst_assets": [
+       "prod-db"
+      ],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": []
+     },
+     "efficacy": 0.95,
+     "exceptions": []
+    }
+   ],
+   "name": "Segment prod-db (deny all inbound)"
+  },
+  {
+   "cost": 6,
+   "id": "seg_prod_db_scoped",
+   "impacts": [
+    {
+     "breaks_flows": true,
+     "deny": {
+      "dst_assets": [
+       "prod-db"
+      ],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": []
+     },
+     "efficacy": 0.95,
+     "exceptions": [
+      {
+       "dst_assets": [
+        "prod-db"
+       ],
+       "dst_zones": [],
+       "identity_ids": [
+        "svc.payroll"
+       ],
+       "identity_kinds": [],
+       "ports": [
+        5432
+       ],
+       "protocols": [
+        "tcp"
+       ],
+       "src_assets": [
+        "payroll-api"
+       ],
+       "src_zones": [],
+       "techniques": []
+      },
+      {
+       "dst_assets": [
+        "prod-db"
+       ],
+       "dst_zones": [],
+       "identity_ids": [
+        "svc.backup"
+       ],
+       "identity_kinds": [],
+       "ports": [
+        5432
+       ],
+       "protocols": [
+        "tcp"
+       ],
+       "src_assets": [
+        "backup-01"
+       ],
+       "src_zones": [],
+       "techniques": []
+      },
+      {
+       "dst_assets": [
+        "prod-db"
+       ],
+       "dst_zones": [],
+       "identity_ids": [
+        "adm.ops"
+       ],
+       "identity_kinds": [],
+       "ports": [
+        3389
+       ],
+       "protocols": [
+        "rdp"
+       ],
+       "src_assets": [
+        "jump-01"
+       ],
+       "src_zones": [],
+       "techniques": []
+      }
+     ]
+    }
+   ],
+   "name": "Segment prod-db (allow payroll, backup, ops)"
+  },
+  {
+   "cost": 3,
+   "id": "mfa_humans",
+   "impacts": [
+    {
+     "breaks_flows": false,
+     "deny": {
+      "dst_assets": [],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [
+       "user",
+       "admin"
+      ],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": []
+     },
+     "efficacy": 0.9,
+     "exceptions": []
+    }
+   ],
+   "name": "MFA for user and admin accounts"
+  },
+  {
+   "cost": 4,
+   "id": "mfa_all",
+   "impacts": [
+    {
+     "breaks_flows": false,
+     "deny": {
+      "dst_assets": [],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [
+       "user",
+       "admin"
+      ],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": []
+     },
+     "efficacy": 0.9,
+     "exceptions": []
+    },
+    {
+     "breaks_flows": true,
+     "deny": {
+      "dst_assets": [],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [
+       "service_account"
+      ],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": []
+     },
+     "efficacy": 0.9,
+     "exceptions": []
+    }
+   ],
+   "name": "MFA for every account incl. service accounts"
+  },
+  {
+   "cost": 5,
+   "id": "edr_cred_dump",
+   "impacts": [
+    {
+     "breaks_flows": false,
+     "deny": {
+      "dst_assets": [],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": [
+       "cred_dump"
+      ]
+     },
+     "efficacy": 0.7,
+     "exceptions": []
+    }
+   ],
+   "name": "EDR with credential-dump prevention"
+  },
+  {
+   "cost": 2,
+   "id": "patch_web_dmz",
+   "impacts": [
+    {
+     "breaks_flows": false,
+     "deny": {
+      "dst_assets": [
+       "web-dmz"
+      ],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": [
+       "exploit_public_app"
+      ]
+     },
+     "efficacy": 0.95,
+     "exceptions": []
+    }
+   ],
+   "name": "Patch the customer web portal"
+  },
+  {
+   "cost": 2,
+   "id": "jump_hardening",
+   "impacts": [
+    {
+     "breaks_flows": false,
+     "deny": {
+      "dst_assets": [
+       "jump-01"
+      ],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": [
+       "priv_esc_local"
+      ]
+     },
+     "efficacy": 0.8,
+     "exceptions": []
+    }
+   ],
+   "name": "Harden the jump host (no local priv-esc)"
+  },
+  {
+   "cost": 1,
+   "id": "disable_smb_share",
+   "impacts": [
+    {
+     "breaks_flows": true,
+     "deny": {
+      "dst_assets": [
+       "fileshare"
+      ],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [],
+      "ports": [],
+      "protocols": [
+       "smb"
+      ],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": []
+     },
+     "efficacy": 1.0,
+     "exceptions": []
+    }
+   ],
+   "name": "Decommission the HR SMB share"
+  }
+ ],
+ "twin": {
+  "assets": [
+   {
+    "criticality": 1,
+    "crown_jewel": false,
+    "id": "internet",
+    "kind": "internet",
+    "name": "Internet",
+    "zone": "external"
+   },
+   {
+    "criticality": 3,
+    "crown_jewel": false,
+    "id": "web-dmz",
+    "kind": "server",
+    "name": "Customer web portal",
+    "zone": "dmz"
+   },
+   {
+    "criticality": 2,
+    "crown_jewel": false,
+    "id": "ws-dev",
+    "kind": "workstation",
+    "name": "Developer workstation",
+    "zone": "corp"
+   },
+   {
+    "criticality": 2,
+    "crown_jewel": false,
+    "id": "ws-hr",
+    "kind": "workstation",
+    "name": "HR workstation",
+    "zone": "corp"
+   },
+   {
+    "criticality": 2,
+    "crown_jewel": false,
+    "id": "fileshare",
+    "kind": "share",
+    "name": "HR file share",
+    "zone": "corp"
+   },
+   {
+    "criticality": 3,
+    "crown_jewel": false,
+    "id": "ci-runner",
+    "kind": "server",
+    "name": "CI runner",
+    "zone": "corp"
+   },
+   {
+    "criticality": 3,
+    "crown_jewel": false,
+    "id": "jump-01",
+    "kind": "server",
+    "name": "Ops jump host",
+    "zone": "mgmt"
+   },
+   {
+    "criticality": 4,
+    "crown_jewel": false,
+    "id": "payroll-api",
+    "kind": "server",
+    "name": "Payroll API",
+    "zone": "prod"
+   },
+   {
+    "criticality": 3,
+    "crown_jewel": false,
+    "id": "backup-01",
+    "kind": "server",
+    "name": "Backup server",
+    "zone": "prod"
+   },
+   {
+    "criticality": 5,
+    "crown_jewel": true,
+    "id": "prod-db",
+    "kind": "database",
+    "name": "Core banking database",
+    "zone": "prod"
+   }
+  ],
+  "controls": [],
+  "edges": [
+   {
+    "dst": "ws-dev",
+    "evidence": "inventory",
+    "src": "internet",
+    "technique": "phish"
+   },
+   {
+    "dst": "ws-hr",
+    "evidence": "inventory",
+    "src": "internet",
+    "technique": "phish"
+   },
+   {
+    "dst": "web-dmz",
+    "evidence": "observed",
+    "src": "internet",
+    "technique": "exploit_public_app"
+   },
+   {
+    "dst": "ci-runner",
+    "evidence": "inferred",
+    "src": "web-dmz",
+    "technique": "exploit_public_app"
+   },
+   {
+    "dst": "ws-dev",
+    "evidence": "inventory",
+    "src": "ws-dev",
+    "technique": "cred_dump"
+   },
+   {
+    "dst": "ws-hr",
+    "evidence": "inventory",
+    "src": "ws-hr",
+    "technique": "cred_dump"
+   },
+   {
+    "dst": "jump-01",
+    "evidence": "inventory",
+    "src": "jump-01",
+    "technique": "priv_esc_local"
+   },
+   {
+    "dst": "jump-01",
+    "evidence": "inventory",
+    "src": "jump-01",
+    "technique": "cred_dump"
+   },
+   {
+    "dst": "ci-runner",
+    "evidence": "inventory",
+    "src": "ci-runner",
+    "technique": "priv_esc_local"
+   },
+   {
+    "dst": "ci-runner",
+    "evidence": "inventory",
+    "src": "ci-runner",
+    "technique": "cred_dump"
+   },
+   {
+    "dst": "backup-01",
+    "evidence": "inventory",
+    "src": "backup-01",
+    "technique": "cred_dump"
+   },
+   {
+    "dst": "fileshare",
+    "evidence": "inventory",
+    "src": "fileshare",
+    "technique": "creds_in_files"
+   },
+   {
+    "dst": "jump-01",
+    "evidence": "inventory",
+    "src": "ws-dev",
+    "technique": "rdp_lateral"
+   },
+   {
+    "dst": "ci-runner",
+    "evidence": "inventory",
+    "src": "ws-dev",
+    "technique": "ssh_lateral"
+   },
+   {
+    "dst": "fileshare",
+    "evidence": "inventory",
+    "src": "ws-hr",
+    "technique": "smb_lateral"
+   },
+   {
+    "dst": "backup-01",
+    "evidence": "inventory",
+    "src": "ci-runner",
+    "technique": "ssh_lateral"
+   },
+   {
+    "dst": "prod-db",
+    "evidence": "inventory",
+    "src": "jump-01",
+    "technique": "rdp_lateral"
+   },
+   {
+    "dst": "backup-01",
+    "evidence": "inventory",
+    "src": "jump-01",
+    "technique": "rdp_lateral"
+   },
+   {
+    "dst": "prod-db",
+    "evidence": "inventory",
+    "src": "backup-01",
+    "technique": "db_login"
+   },
+   {
+    "dst": "prod-db",
+    "evidence": "inventory",
+    "src": "ws-hr",
+    "technique": "db_login"
+   },
+   {
+    "dst": "prod-db",
+    "evidence": "inventory",
+    "src": "payroll-api",
+    "technique": "db_login"
+   },
+   {
+    "dst": "internet",
+    "evidence": "inventory",
+    "src": "prod-db",
+    "technique": "exfil_c2"
+   }
+  ],
+  "flows": [
+   {
+    "criticality": 5,
+    "dst": "prod-db",
+    "evidence": "inventory",
+    "id": "F1",
+    "identity_id": "svc.payroll",
+    "name": "Payroll API -> core DB",
+    "port": 5432,
+    "protocol": "tcp",
+    "src": "payroll-api"
+   },
+   {
+    "criticality": 4,
+    "dst": "prod-db",
+    "evidence": "inferred",
+    "id": "F2",
+    "identity_id": "svc.backup",
+    "name": "Nightly backup -> core DB",
+    "port": 5432,
+    "protocol": "tcp",
+    "src": "backup-01"
+   },
+   {
+    "criticality": 2,
+    "dst": "jump-01",
+    "evidence": "observed",
+    "id": "F3",
+    "identity_id": "u.dev",
+    "name": "Dev RDP to jump host",
+    "port": 3389,
+    "protocol": "rdp",
+    "src": "ws-dev"
+   },
+   {
+    "criticality": 3,
+    "dst": "backup-01",
+    "evidence": "inventory",
+    "id": "F4",
+    "identity_id": "svc.ci",
+    "name": "CI deploy to backup server",
+    "port": 22,
+    "protocol": "ssh",
+    "src": "ci-runner"
+   },
+   {
+    "criticality": 2,
+    "dst": "fileshare",
+    "evidence": "observed",
+    "id": "F5",
+    "identity_id": "u.hr",
+    "name": "HR file share access",
+    "port": 445,
+    "protocol": "smb",
+    "src": "ws-hr"
+   },
+   {
+    "criticality": 3,
+    "dst": "prod-db",
+    "evidence": "observed",
+    "id": "F6",
+    "identity_id": "adm.ops",
+    "name": "Ops maintenance RDP to DB host",
+    "port": 3389,
+    "protocol": "rdp",
+    "src": "jump-01"
+   }
+  ],
+  "grants": [
+   {
+    "asset_id": "ws-dev",
+    "capability": "session",
+    "evidence": "observed",
+    "identity_id": "u.dev"
+   },
+   {
+    "asset_id": "jump-01",
+    "capability": "login",
+    "evidence": "inventory",
+    "identity_id": "u.dev"
+   },
+   {
+    "asset_id": "ci-runner",
+    "capability": "admin",
+    "evidence": "inferred",
+    "identity_id": "u.dev"
+   },
+   {
+    "asset_id": "ws-hr",
+    "capability": "session",
+    "evidence": "observed",
+    "identity_id": "u.hr"
+   },
+   {
+    "asset_id": "fileshare",
+    "capability": "login",
+    "evidence": "inventory",
+    "identity_id": "u.hr"
+   },
+   {
+    "asset_id": "jump-01",
+    "capability": "session",
+    "evidence": "observed",
+    "identity_id": "adm.ops"
+   },
+   {
+    "asset_id": "prod-db",
+    "capability": "admin",
+    "evidence": "inventory",
+    "identity_id": "adm.ops"
+   },
+   {
+    "asset_id": "backup-01",
+    "capability": "admin",
+    "evidence": "inventory",
+    "identity_id": "adm.ops"
+   },
+   {
+    "asset_id": "payroll-api",
+    "capability": "session",
+    "evidence": "inventory",
+    "identity_id": "svc.payroll"
+   },
+   {
+    "asset_id": "prod-db",
+    "capability": "login",
+    "evidence": "inventory",
+    "identity_id": "svc.payroll"
+   },
+   {
+    "asset_id": "fileshare",
+    "capability": "session",
+    "evidence": "inferred",
+    "identity_id": "svc.payroll"
+   },
+   {
+    "asset_id": "backup-01",
+    "capability": "session",
+    "evidence": "inventory",
+    "identity_id": "svc.backup"
+   },
+   {
+    "asset_id": "prod-db",
+    "capability": "admin",
+    "evidence": "inferred",
+    "identity_id": "svc.backup"
+   },
+   {
+    "asset_id": "ci-runner",
+    "capability": "session",
+    "evidence": "inventory",
+    "identity_id": "svc.ci"
+   },
+   {
+    "asset_id": "backup-01",
+    "capability": "admin",
+    "evidence": "inventory",
+    "identity_id": "svc.ci"
+   },
+   {
+    "asset_id": "ws-dev",
+    "capability": "session",
+    "evidence": "observed",
+    "identity_id": "contractor"
+   },
+   {
+    "asset_id": "jump-01",
+    "capability": "admin",
+    "evidence": "observed",
+    "identity_id": "contractor"
+   }
+  ],
+  "id": "2a840b7caedb1dc8bbf78a405f448c507857a2fb119e3551b6b4bf2550d260e3",
+  "identities": [
+   {
+    "id": "u.dev",
+    "kind": "user",
+    "name": "Dev user (alice)",
+    "tier": 2
+   },
+   {
+    "id": "u.hr",
+    "kind": "user",
+    "name": "HR user (bob)",
+    "tier": 2
+   },
+   {
+    "id": "adm.ops",
+    "kind": "admin",
+    "name": "Ops administrator",
+    "tier": 0
+   },
+   {
+    "id": "svc.payroll",
+    "kind": "service_account",
+    "name": "Payroll service account",
+    "tier": 1
+   },
+   {
+    "id": "svc.backup",
+    "kind": "service_account",
+    "name": "Backup service account",
+    "tier": 1
+   },
+   {
+    "id": "svc.ci",
+    "kind": "service_account",
+    "name": "CI service account",
+    "tier": 1
+   },
+   {
+    "id": "contractor",
+    "kind": "user",
+    "name": "Contractor (temp admin)",
+    "tier": 2
+   }
+  ],
+  "parent_id": "ee4a25ce932b7c0f2caa8dcd5eb2c9bd7724a0bdc8ebfd34aa902119c95f2ca5"
+ }
+}
