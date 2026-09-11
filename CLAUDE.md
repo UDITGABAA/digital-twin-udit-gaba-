@@ -7,6 +7,8 @@ Detail lives in `docs/`. This file holds only what must never drift.
 - Branching, ownership, PR rules, AI-session protocol → `docs/GOVERNANCE.md`
 - Cross-track function signatures → `docs/INTERFACES.md`
 - Demo run sheet → `docs/DEMO_SCRIPT.md`
+- Slide content (8 slides, prior-art table on slide 2) → `docs/SLIDES.md`
+- Gate status and Phase 5 log → `docs/STATUS.md`
 
 ---
 
