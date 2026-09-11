@@ -80,6 +80,12 @@ class Blast(BaseModel, frozen=True):
     asset_id: str; reachable: tuple[str, ...]; crown_jewels_hit: tuple[str, ...]
     upper_bound: tuple[str, ...]                                # nx.descendants, ignores credentials
 def blast_radius(twin: Twin, edges: tuple[CompiledEdge, ...], asset_id: str) -> Blast
+    # reachable: credential-expanding closure from asset_id (internet is a sink, never a launchpad)
+
+# scenario.py
+class Scenario(BaseModel, frozen=True):
+    twin: Twin; agents: tuple[Agent, ...]; catalogue: tuple[Control, ...]   # catalogue = proposable controls
+def load_scenario(name_or_path) -> Scenario      # "golden" -> scenarios/golden.json
 ```
 
 ---
@@ -93,26 +99,35 @@ class Confidence(BaseModel, frozen=True):
     undetermined: bool                   # any decisive element is 'assumed'
 class Alternative(BaseModel, frozen=True):
     control_ids: tuple[str, ...]; cost: int; effort_increase_pct: float | None
-    route_eliminated: bool; broken_flows: tuple[str, ...]; recommendation: str
+    route_eliminated: bool; p_success_delta: float; broken_flows: tuple[str, ...]; recommendation: str
 class ChangeVerdict(BaseModel, frozen=True):
     twin_id: str; after_twin_id: str; control_ids: tuple[str, ...]
-    delta: Delta; before: Result; after: Result
+    delta: Delta; before: Result; after: Result; outcomes: tuple[AgentOutcome, ...]
     broken_flows: tuple[ServiceFlow, ...]; cost: int
     confidence: Confidence
     recommendation: Literal["deploy", "blocked", "review"]; reasons: tuple[str, ...]
     alternatives: tuple[Alternative, ...]
-def evaluate_change(twin: Twin, control_ids: tuple[str, ...], agent_ids: tuple[str, ...],
-                    *, seed: int = 1, n: int = 1000) -> ChangeVerdict
-    # controls and agents are looked up in the twin / agent catalogue by id
+class AgentOutcome(BaseModel, frozen=True):
+    agent_id: str; before: Result; after: Result; naive_before: int; naive_after: int; delta: Delta
+def evaluate_change(scenario: Scenario, control_ids: tuple[str, ...], agent_ids: tuple[str, ...] = (),
+                    *, twin: Twin | None = None, seed: int = 1, n: int = 1000,
+                    techniques: TechniqueTable | None = None, with_alternatives: bool = True) -> ChangeVerdict
+    # controls come from scenario.catalogue, agents from scenario.agents; twin defaults to scenario.twin
+    # ChangeVerdict.delta/before/after are the first agent's; outcomes has every agent
+def confidence_of(outcomes, broken_flows) -> Confidence
+def verdict_of(broken_flows, confidence, deltas) -> (recommendation, reasons)
 
 class Portfolio(BaseModel, frozen=True):
     budget: int
     constrained: tuple[str, ...]; constrained_risk_reduction: float; constrained_cost: int
     naive: tuple[str, ...]; naive_risk_reduction: float; naive_broken_flows: tuple[str, ...]
     evaluated: int                                              # subsets scored
-def optimize(twin: Twin, budget: int, agents: tuple[Agent, ...]) -> Portfolio
-    # exhaustive over every subset within budget; discard any breaking a flow with criticality >= 4;
-    # risk via route_policy (deterministic), never Monte Carlo
+    baseline_risk: float; constrained_broken_flows: tuple[str, ...]; naive_cost: int
+def risk(twin, agents, techniques) -> float      # sum over agents of target_crit x sum(p_select x p_route)
+                                                 # ignores detection on retries: an UPPER BOUND on simulated p_success x crit
+def optimize(scenario: Scenario, budget: int, agent_ids: tuple[str, ...] | None = None,
+             *, twin: Twin | None = None, techniques=None) -> Portfolio
+    # exhaustive over every subset within budget; discard any breaking a flow with criticality >= 4
 ```
 
 ---
@@ -120,19 +135,21 @@ def optimize(twin: Twin, budget: int, agents: tuple[Agent, ...]) -> Portfolio
 ## D → C · HTTP (owner: D) — responses are the Pydantic models' JSON; `types.ts` is generated from them
 
 ```
-GET  /twin/{id}                          -> Twin
-POST /twin/{id}/clone                    {add_controls?, add_edges?, remove_edges?, add_grants?} -> Twin
+GET  /twin/{id}                          -> Twin                       ("current" = the loaded scenario's twin)
+POST /twin/{id}/clone                    {control_ids?, add_grants?, label?} -> Twin
+GET  /graph/{id}                         -> {assets, identities, grants, attack_edges[{src,dst,technique,attck,identities,p_success,evidence}], flows, controls}
+GET  /paths/{id}?agent_id=               -> {naive_count, count, routes}   (attack path discovery)
 POST /simulate                           {twin_id, agent_id, n, seed} -> Result
-POST /evaluate-change                    {twin_id, control_ids, agent_ids, seed?} -> ChangeVerdict
+POST /evaluate-change                    {twin_id, control_ids, agent_ids, seed?, n?} -> ChangeVerdict   (422 if control_ids empty)
 POST /optimize                           {twin_id, budget, agent_ids} -> Portfolio
-GET  /matrix/{twin_id}?agent_ids=..      -> {controls: [...], agents: [...], cells: [[effort_increase_pct | null]], route_eliminated: [[bool]]}
-GET  /blast-radius/{twin_id}/{asset_id}  -> Blast
-GET  /lineage/{twin_id}                  -> {nodes: [{id, parent_id, label}], edges: [[parent, child]]}
-GET  /scenarios                          -> ["golden", "golden_sync"]
+GET  /matrix/{id}?seed&n                 -> {agents, rows[{control_id, name, cost, broken_flows, cells[{agent_id, effort_increase_pct, route_eliminated, p_success_delta, recommendation}]}]}
+GET  /blast-radius/{id}/{asset_id}       -> Blast
+GET  /lineage/{id}                       -> {nodes: [{id, parent_id, label, controls}], edges: [[parent, child]]}
+GET  /scenarios                          -> {scenarios: [...], current: twin_id}
 POST /scenarios/{name}/load              -> Twin        (the ONE sync action)
 GET  /agents                             -> [Agent]
-GET  /controls/{twin_id}                 -> [Control]
+GET  /controls/{id}                      -> {applied: [Control], catalogue: [Control]}
 ```
 
-Errors: `422` on unknown ids; `409 {"error": "SearchBudgetExceeded"}` if search caps trip.
-CORS: `http://localhost:5173`.
+Errors: `404` unknown twin/scenario/asset, `422` unknown control/agent or empty proposal, `409` if search caps trip.
+CORS: `http://localhost:5173`; the Vite dev server proxies `/api/*` to `:8000`.

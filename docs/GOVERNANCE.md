@@ -18,60 +18,52 @@ Everything below exists to make those two failures impossible rather than unlike
 If your task needs a file outside your directory, you do not edit it — you ask the owner.
 
 ```
-digital-twin/                     (repo: techie-rahul/digital-twin, integration branch UDIT)
-├── CLAUDE.md                     SHARED — group change only
-├── README.md                     D
-├── requirements.txt              D
-├── docs/                         D  (INTERFACES.md: each owner edits their own section)
-│   ├── GOVERNANCE.md
-│   ├── IMPLEMENTATION_PLAN.md
-│   ├── INTERFACES.md             the four cross-track signatures — the contract between AI sessions
-│   ├── DEMO_SCRIPT.md
-│   └── STATUS.md                 one line per track per gate
+digital-twin/                     (repo: UDITGABAA/digital-twin-udit-gaba-, branch main)
+├── CLAUDE.md                     the shared brain — contract, algorithms, claims
+├── README.md
+├── requirements.txt
+├── pytest.ini                    pythonpath = .
+├── .github/workflows/ci.yml      pytest + dashboard build on every push
+├── docs/
+│   └── GOVERNANCE.md · IMPLEMENTATION_PLAN.md · INTERFACES.md · DEMO_SCRIPT.md · SLIDES.md · STATUS.md
 │
 ├── scripts/
-│   └── gen_types.py              C   models.py JSON schema -> dashboard/src/types.ts
+│   └── build_golden.py           FinBank story -> scenarios/golden.json + golden_sync.json (never hand-edit the JSON)
 │
-├── engine/                       ══ OWNER: A (engine) ══
-│   ├── models.py                 FROZEN CONTRACT — group change only
-│   ├── twin.py                   clone(), canonical hashing, lineage
+├── engine/                       ══ A: engine ══
+│   ├── models.py                 FROZEN CONTRACT (+ twin_hash)
+│   ├── twin.py                   clone()
+│   ├── scenario.py               Scenario(twin, agents, catalogue), load_scenario()
 │   ├── search.py                 complete path search (algorithm a) over CompiledEdge
 │   ├── walk.py                   route_policy() + plan-then-execute trials (algorithm b)
 │   ├── results.py                Result, Delta, diff()
-│   └── blast.py                  search seeded from a fallen asset; nx.descendants upper bound
+│   └── blast.py                  credential-aware reachability + nx.descendants upper bound
 │
-├── rules/                        ══ OWNER: B (rules & decisions) ══
-│   ├── techniques.yaml           FROZEN CONTRACT — group change only (10 entries)
-│   ├── loader.py                 YAML -> technique table
-│   ├── compile.py                Edge x declared technique x grants x controls -> CompiledEdge
-│   ├── evaluate.py               evaluate_change(): broken flows, confidence, verdict, alternatives
-│   ├── optimize.py               exhaustive constrained portfolio (<= 1024 subsets)
-│   └── _stub_policy.py           B's stand-in for A's route_policy until it merges
+├── rules/                        ══ B: rules & decisions ══
+│   ├── techniques.yaml           FROZEN CONTRACT (10 entries)
+│   ├── loader.py                 YAML -> technique table, grammar validation
+│   ├── compile.py                Edge x declared technique x grants x control impacts -> CompiledEdge; matches(); broken_flows()
+│   ├── evaluate.py               evaluate_change(): outcomes per agent, confidence, verdict, alternatives
+│   └── optimize.py               risk() (deterministic upper bound) + exhaustive constrained optimize()
 │
-├── server/                       ══ OWNER: D (integration) ══
-│   ├── app.py                    FastAPI app, CORS, startup precompute
-│   ├── routes.py                 the 8 endpoints (incl. /matrix looping evaluate_change)
-│   ├── stubs.py                  D's stand-ins for A/B functions until they merge
-│   └── cache.py                  content-addressed result cache
+├── server/
+│   └── app.py                    ══ D ══ FastAPI, all endpoints, in-memory twin + verdict dicts
 │
-├── scenarios/                    ══ OWNER: D ══
-│   ├── golden.json               the FinBank demo twin
-│   ├── golden_sync.json          golden + contractor admin@jump-01 (sync demo)
-│   └── narration.json            pre-generated route narration
+├── scenarios/                    ══ D ══
+│   ├── golden.json               FinBank
+│   └── golden_sync.json          FinBank + contractor admin@jump-01 (the sync demo)
 │
 ├── tests/
-│   ├── test_fixture.py           A
-│   ├── test_invariants.py        A
-│   ├── test_rules.py             B
-│   ├── test_evaluate.py          B
-│   └── test_scenario.py          D
+│   ├── test_fixture.py · test_invariants.py     A
+│   ├── test_rules.py · test_evaluate.py         B
+│   └── test_scenario.py                         D — pins every number in DEMO_SCRIPT.md
 │
-└── dashboard/                    ══ OWNER: C — entire tree (Vite app replaces the static index.html) ══
+└── dashboard/                    ══ C ══ Vite + React + TS + Tailwind; /api proxied to :8000
     └── src/
-        ├── types.ts              generated by scripts/gen_types.py, never hand-edited
+        ├── types.ts              hand-written mirror of the Pydantic models
         ├── api/client.ts
-        ├── api/mocks.ts          C's unblocking mechanism
-        └── views/                DecisionCard first, then Graph, Histograms, Optimizer, Matrix, Blast, Lineage
+        ├── App.tsx               state, control picker, scenario/adversary switch, status bar
+        └── views/                DecisionCard (hero) · GraphView · EffortChart · OptimizerPanel
 ```
 
 Only **three** files are ever touched by more than one person: `CLAUDE.md`,
@@ -79,24 +71,25 @@ Only **three** files are ever touched by more than one person: `CLAUDE.md`,
 protocol in §2. Everything else has exactly one owner, so a conflict in it means someone
 broke the rule.
 
-**Roles & Device Mapping (Four People, Four Laptops):**
+**Roles in one line each** (the file map above is what each track owns; in the solo build one
+person holds all four):
 
-- **Device 1 / Person 1 (Udit Gaba) — Track A (Engine Owner):** Owns `engine/` and `tests/test_fixture.py`, `tests/test_invariants.py`. Correctness of the two algorithms (Algorithm A: complete state-space DFS path search; Algorithm B: deterministic `route_policy` + plan-then-execute Monte Carlo walk), result diffing, and capability-aware blast radius. Reads every line of `engine/` personally. **Answers judges' algorithm, state-space complexity, and simulation math questions.**
-- **Device 2 / Person 2 — Track B (Rules & Decisions Owner):** Owns `rules/` and `tests/test_rules.py`, `tests/test_evaluate.py`. Loads `techniques.yaml` (10 ATT&CK techniques), builds `compile.py` with channel matching, `evaluate_change()` (broken flows, confidence scoring, verdict rules), and the exhaustive constrained portfolio optimiser. **Answers judges' questions on business breakage, confidence computation, and remediation prioritization.**
-- **Device 3 / Person 3 — Track C (Frontend & Visualisation):** Owns `dashboard/` and `scripts/gen_types.py`. Starts at hour 1.5 against `api/mocks.ts` and is never blocked on the backend. Builds the Decision Card hero component first, then Recharts attacker-effort histograms, and the React Flow attack graph with animated substituted paths. **Controls UI micro-interactions, responsive displays, and fallback views.**
-- **Device 4 / Person 4 — Track D (Integration, Release Manager & Demo Driver):** Owns `server/`, `scenarios/`, `docs/`, `README.md`, and `tests/test_scenario.py`. Builds FastAPI app, CORS, caching, FinBank `golden.json` and `golden_sync.json` scenarios, pre-generated narration, and regression tests. Calls the 6 gates and **drives the live demo on stage**.
+- **A — engine.** Correctness of the two algorithms over `CompiledEdge`. Answers the judges'
+  algorithm questions (state explosion, why effort can go down).
+- **B — rules and decisions.** Technique table with ATT&CK ids, `compile.py`,
+  `evaluate_change`, the exhaustive optimiser. Answers breakage / confidence / verdict questions.
+- **C — dashboard.** Decision card first, then graph, histograms, optimiser.
+- **D — integration and demo.** API, scenarios, docs, `test_scenario.py`; calls the gates and
+  drives the demo.
 
-### 1.1 Base Workflow & Environment Setup (All 4 Together - First 90 Min)
+### 1.1 Base workflow — what "everyone together first" produced (done)
 
-Before anyone branches out or runs independent AI prompts, all 4 devices execute these steps simultaneously:
-1. **Repository Sync:** All 4 clone/pull the `UDIT` branch on `techie-rahul/digital-twin`.
-2. **Review Legacy Code:** Jointly review `origin/aryan` to confirm mapped components per the migration table in `docs/IMPLEMENTATION_PLAN.md`.
-3. **Lock Frozen Contracts:** Commit `engine/models.py` (frozen Pydantic models + canonical `twin_hash`) and `rules/techniques.yaml` (10 ATT&CK techniques).
-4. **Publish Interfaces:** Verify `docs/INTERFACES.md` has the 4 function signatures.
-5. **Base Scenario:** Commit `scenarios/golden.json` v0 (FinBank assets, identities, grants, flows, edges — no controls).
-6. **Generate Types:** Run `python scripts/gen_types.py` to write `dashboard/src/types.ts`.
-7. **Gate G0 Gate Check:** Every device runs and passes the Gate G0 commands (§5). Only then do members switch to feature branches `a/...`, `b/...`, `c/...`, `d/...`.
-
+The base every track builds on is on `main` and verified by `pytest` + CI:
+`engine/models.py` (+ `twin_hash`), `rules/techniques.yaml` (10), `docs/INTERFACES.md`,
+`scenarios/golden.json` + `golden_sync.json` (from `scripts/build_golden.py`),
+`dashboard/src/types.ts` (hand-written; `gen_types.py` was cut). A new contributor: clone,
+`pip install -r requirements.txt`, `npm install --prefix dashboard`, `pytest` → 36 green, then
+branch `a/…`, `b/…`, `c/…`, `d/…` off `main`.
 
 ---
 
@@ -110,7 +103,7 @@ Before anyone branches out or runs independent AI prompts, all 4 devices execute
    message, first.
 2. Get an ack from every person whose track touches it. Silence is not an ack.
 3. One person applies it in a PR titled `contract: <what changed>`, merged immediately.
-4. Everyone else stops, pulls `UDIT`, rebases, and confirms their branch still builds
+4. Everyone else stops, pulls `main`, rebases, and confirms their branch still builds
    before continuing.
 5. C regenerates `dashboard/src/types.ts` from the new models in the same cycle.
 
@@ -124,18 +117,18 @@ changing the contract at hour 12, something is wrong with the plan, not the code
 
 ## 3. Branching
 
-`UDIT` is always demoable. That is the whole rule; the rest is mechanics.
+`main` is always demoable. That is the whole rule; the rest is mechanics.
 
-- Integration branch is `UDIT`, cut from the existing repo's `main`. Nothing from the
+- Integration branch is `main` of `UDITGABAA/digital-twin-udit-gaba-`. Nothing from the
   old `engine/` is imported by new code — it is read, ported, and deleted in the same PR
   that adds its replacement. No two implementations alive at once.
 - Branch names: `a/search-state-space`, `b/compile`, `c/decision-card`,
   `d/golden-scenario`. Owner prefix so anyone can see at a glance who is on what.
-- Branch off `UDIT`, never off another feature branch.
+- Branch off `main`, never off another feature branch.
 - **Small PRs, merged fast.** Target under 400 lines. A branch older than three hours is
   a liability — if you cannot finish, merge the working part behind a flag.
-- Rebase on `UDIT` before opening a PR: `git fetch origin && git rebase origin/UDIT`.
-- Never force-push `UDIT`. Force-push your own branch freely.
+- Rebase on `main` before opening a PR: `git fetch origin && git rebase origin/main`.
+- Never force-push `main`. Force-push your own branch freely.
 - `.gitignore` from hour zero: `__pycache__/`, `.venv/`, `node_modules/`, `dist/`,
   `.pytest_cache/`, `*.pyc`, `.env`.
 
@@ -156,7 +149,7 @@ Optimise for speed without losing the one check that matters.
   `techniques.yaml`, `engine/search.py`, `engine/walk.py`, or `rules/compile.py`. Wrong logic
   there is invisible and poisons every number downstream.
 - CI must be green. A red test blocks merge, always, including at hour 22.
-- Squash-merge so `UDIT`'s history stays readable.
+- Squash-merge so `main`'s history stays readable.
 
 ---
 
@@ -167,9 +160,9 @@ minutes each, maximum.
 
 | Gate | Hour | Everyone must show |
 |---|---|---|
-| G0 — Contract | 1.5 | `models.py` v2.1, `techniques.yaml` (10), `docs/INTERFACES.md`, `golden.json` v0 on `UDIT`; `types.ts` generated; all four have pulled and pass the three P0 commands |
+| G0 — Contract | 1.5 | `models.py` v2.1, `techniques.yaml` (10), `docs/INTERFACES.md`, `golden.json` on `main`; `types.ts` present; all four have pulled and pass the three P0 commands |
 | G1 — Skeleton | 4 | `/simulate` returns a hardcoded `Result`; the decision card renders it from the real API, mocks off |
-| G2 — Engine | 9 | `test_fixture.py`, `test_invariants.py`, `test_rules.py` green on `UDIT` |
+| G2 — Engine | 9 | `test_fixture.py`, `test_invariants.py`, `test_rules.py` green on `main` |
 | G3 — Differentiator | 14 | `/evaluate-change` on `seg_prod_db_full` returns both metrics, F1 in `broken_flows`, confidence Medium with a named unknown, `recommendation: blocked`, non-empty `alternatives`; the card renders all of it |
 | G4 — Feature freeze | 18 | Everything merged: optimiser, matrix, sync. `pytest` green. No new features after this point, ever |
 | G5 — Rehearsal | 21 | Full demo run end to end, under four minutes, twice |
@@ -188,7 +181,7 @@ adding one more thing. Hours 18–24 are rehearsal, bug-fixing and the pitch. No
 - One channel, and decisions get posted there, not held in someone's head.
 - **"I'm blocked" is said within five minutes of being blocked**, not after 40 minutes of
   fighting it alone. Everything is time-boxed here and a silent blocker costs four people.
-- When you merge something others depend on, post it: *"evaluate_change is on UDIT."*
+- When you merge something others depend on, post it: *"evaluate_change is on main."*
 - Post a one-line status at each gate in `docs/STATUS.md`. That is the only status
   reporting required.
 
@@ -205,7 +198,7 @@ if, and only if:
 - Nobody lets a session edit `models.py` or `techniques.yaml` without the §2 protocol.
   Say so explicitly at the start of the session — it is the single highest-value sentence
   you will type.
-- Pull `UDIT` before starting a session, so it reasons about current code rather than
+- Pull `main` before starting a session, so it reasons about current code rather than
   the repo as it was two hours ago.
 
 **The velocity trap:** four AI sessions generate code far faster than four humans can read
@@ -224,8 +217,8 @@ annoying.
   cut order is in `CLAUDE.md` §11.
 - **A contract change is proposed after hour 12:** default answer is no. Work around it.
   The cost of re-syncing four branches late exceeds almost any benefit.
-- **`UDIT` is broken:** it is everyone's top priority until it is green. Nobody starts
-  new work on a broken `UDIT`.
+- **`main` is broken:** it is everyone's top priority until it is green. Nobody starts
+  new work on a broken `main`.
 
 ---
 
@@ -243,7 +236,7 @@ habit.
 2. **`docs/INTERFACES.md` is the only channel between sessions.** It holds the four
    cross-track signatures with their types. A session that changes a signature edits its
    owner's section of INTERFACES.md **in the same PR** as the code. The human then posts one
-   line in the team channel: `[A] route_policy(inventory, agent) is on UDIT`. Everyone
+   line in the team channel: `[A] route_policy(inventory, agent) is on main`. Everyone
    pulls before their next prompt.
 
 3. **Consumers own their stubs.** Each track keeps a stand-in for what it consumes *inside
@@ -257,7 +250,7 @@ habit.
 
 4. **Handoff message is three lines**: what merged · the signature · the command that proves
    it. Example:
-   > `compile()` is on UDIT · `compile(twin, techniques, *, naive=False) -> tuple[CompiledEdge, ...]` ·
+   > `compile()` is on main · `compile(twin, techniques, *, naive=False) -> tuple[CompiledEdge, ...]` ·
    > `pytest tests/test_rules.py -q`
 
 5. **`docs/STATUS.md`** — one line per track per gate, written by the human, not the session.
@@ -275,7 +268,7 @@ habit.
    Before typing a new task or prompt into Claude Code / Antigravity, the developer runs:
    ```bash
    git fetch origin
-   git rebase origin/UDIT
+   git rebase origin/main
    ```
    If a teammate has merged code, the AI session will now see the latest signatures in `docs/INTERFACES.md` and avoid hallucinations.
 
@@ -286,7 +279,7 @@ habit.
    - If an AI session is missing a signature or model field:
      1. Check `docs/INTERFACES.md`.
      2. If absent, message the owner of that track. The owner adds the typed signature to `docs/INTERFACES.md` and commits.
-     3. You rebase on `UDIT` and resume.
+     3. You rebase on `main` and resume.
 
 10. **Per-Track Verification Matrix (Must pass 100% locally before opening PR):**
     - **Track A (Device 1 / Udit):** `pytest tests/test_fixture.py tests/test_invariants.py -v`

@@ -1,9 +1,6 @@
 """FastAPI surface over the engine. Localhost only. No database: scenarios are JSON files,
 twins live in an in-memory dict keyed by twin hash, results in a dict keyed by request."""
 
-from pathlib import Path
-from typing import Optional
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -173,6 +170,8 @@ class EvaluateRequest(BaseModel):
 def run_evaluate(req: EvaluateRequest) -> ChangeVerdict:
     twin = _twin(req.twin_id)
     key = (twin.id, req.control_ids, req.agent_ids, req.seed, req.n)
+    if not req.control_ids:
+        raise HTTPException(422, "propose at least one control")
     if key not in VERDICTS:
         cat = {c.id for c in SCENARIO.catalogue}
         unknown = set(req.control_ids) - cat

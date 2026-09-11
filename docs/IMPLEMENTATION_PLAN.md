@@ -30,15 +30,11 @@ Everything below is done on one screen, everyone watching, and pushed before any
 
 **Do, in this order:**
 
-1. Branch `UDIT` already exists on `techie-rahul/digital-twin` with the repo skeleton
-   (`engine/ rules/ scenarios/ server/ tests/ dashboard/`). Everyone pulls it. Protect it.
-   Add `.github/workflows/ci.yml` (`pip install -r requirements.txt && pytest`). The `.gitignore`
-   is already real.
-2. Read the old code together — it lives on branch `aryan`: `engine/models.py`,
-   `engine/twin.py` (`DigitalTwin`), `engine/simulator.py` (`AdversaryAgent`),
-   `server/app.py`, `scenarios/enterprise_cloud.json`, `dashboard/index.html`. The
-   migration table (§Migration below) already says what happens to each. Ten minutes, to
-   agree, not to re-derive.
+1. Repo is `UDITGABAA/digital-twin-udit-gaba-`, integration branch `main`, layout
+   `engine/ rules/ scenarios/ server/ tests/ dashboard/`. CI runs `pytest` and the dashboard
+   build on every push.
+2. The engine ported from the previous repo's prototype was reviewed and consolidated
+   (§Migration below records what was kept); nothing from the old prototype is imported.
 3. Write `engine/models.py` — copy from `CLAUDE.md` §5. Argue about it now, never
    later. Add the canonical `twin_hash()` next to it.
 4. Write `rules/techniques.yaml` — the ten entries, each with its ATT&CK ID and
@@ -143,7 +139,7 @@ marked), and the route animation, against mocks.
 **Exit (Gate G2):**
 
 ```bash
-pytest tests/test_fixture.py tests/test_invariants.py tests/test_rules.py -v   # all green on UDIT
+pytest tests/test_fixture.py tests/test_invariants.py tests/test_rules.py -v   # all green on main
 ```
 
 **Traps.** Running the state-space search inside the Monte Carlo loop — an order of
@@ -229,7 +225,7 @@ route narration in `narration.json`, `tests/test_scenario.py` first draft.
 ```bash
 pytest                                  # everything green
 curl.exe localhost:8000/optimize?twin_id=golden^&budget=12   # constrained != naive, constrained breaks no P1 flow
-git log origin/UDIT -1               # last feature merge
+git log origin/main -1               # last feature merge
 ```
 
 Everything merged. **No new features after this line, ever.** Every hackathon team breaks
@@ -354,7 +350,7 @@ Numbers (+18%, +14%, 5 → 2) in `CLAUDE.md` §2 are targets; the real ones are 
 
 ---
 
-## Migration from the existing engine (branch `aryan`)
+## Migration from the previous repo's engine (historical — done)
 
 What exists is a v0 "BloodHound-lite": mutable Pydantic models, a NetworkX graph,
 `nx.all_simple_paths` with no capability state, no identities, no controls model, and
@@ -362,7 +358,7 @@ ATT&CK labels inferred from relation strings *after* a path is found. Rule: noth
 is imported by new code; each file is read, ported where useful, and deleted in the PR that
 adds its replacement. No two implementations alive at once.
 
-| Existing (`aryan`) | What it does | Becomes | Owner | Keep |
+| Existing (old repo, branch `aryan`) | What it did | Became | Owner | Kept |
 |---|---|---|---|---|
 | `engine/models.py` — `NodeModel`, `EdgeModel(relation, port)`, `EnvironmentModel`, `AttackPath/AttackStep`, `BlastRadiusResult` | mutable `List[...]` models; no identities | replaced by `engine/models.py` v2.1 (frozen) | all (P0) | field names `id`, `name`, `zone`; `port` on edges becomes the technique's `channel`; `is_crown_jewel` → `crown_jewel` |
 | `engine/twin.py` — `DigitalTwin.load_environment`, `find_all_attack_paths` (`nx.all_simple_paths`), `compute_blast_radius` (hop distances), `export_graph_json` | graph loading, naive paths, hop-count blast radius | `engine/twin.py` (clone/hash), `engine/search.py`, `engine/blast.py` | A | `export_graph_json`'s node/edge shape for React Flow → D's `/twin/{id}` serialiser; `compute_blast_radius` → `Blast.upper_bound`. **`find_all_attack_paths` is not reusable** — it has no `(node, caps)` state and would fail the creds-two-hops fixture, which is exactly why the fixture is written first |
@@ -372,7 +368,7 @@ adds its replacement. No two implementations alive at once.
 | `dashboard/index.html` — 521-line static page, Tailwind from a CDN | graph visualiser served by FastAPI | replaced by the Vite + React + TS app in `dashboard/`; delete `index.html` and the static mount in the PR that adds the scaffold | C | nothing structural; reuse zone colours if they look good |
 | tests | none exist | — | — | — |
 
-Names that continue unchanged from `aryan`: `zone`, `crown_jewel` (was `is_crown_jewel`),
+Names that continued unchanged from the prototype: `zone`, `crown_jewel` (was `is_crown_jewel`),
 `port`, the scenario directory `scenarios/`, the module names `engine/`, `server/`,
 `dashboard/`, and `server/app.py`. Everything else is the v2.1 contract.
 
@@ -459,4 +455,4 @@ Paste at the start of each teammate's Claude Code session (GOVERNANCE §9 opener
 | 200-node generator in P2 | stretch only, ≤80 nodes | endangered G2 for a vanity number |
 | `model_dump_json` hash | canonical dump with sorted frozensets | frozenset order is not stable across processes |
 | — | `docs/INTERFACES.md`, consumer-owned stubs, GOVERNANCE §9 | four AI sessions need one explicit channel |
-| — | migration from the `aryan` branch engine onto `UDIT` | there is prior code; port what is useful, delete the rest, never fork it |
+| — | migration from the old repo's prototype engine onto `main` | there is prior code; port what is useful, delete the rest, never fork it |

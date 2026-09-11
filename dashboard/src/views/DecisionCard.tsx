@@ -45,7 +45,7 @@ export function DecisionCard({ verdict, catalogue, onPick, onHighlight }: {
       <dl className="mt-5 grid grid-cols-[9rem_1fr] gap-y-3 text-sm">
         <dt className="text-slate-400">Security</dt>
         <dd>
-          <span className="text-lg font-semibold text-emerald-300">{pct(d.effort_increase_pct, d.route_eliminated)}</span>
+          <span className={`text-lg font-semibold ${d.route_eliminated || (d.effort_increase_pct ?? 0) >= 5 ? "text-emerald-300" : "text-amber-300"}`}>{pct(d.effort_increase_pct, d.route_eliminated)}</span>
           <span className="text-slate-400"> modelled attacker effort</span>
           <span className="mx-2 text-slate-600">·</span>
           p(success) {verdict.before.p_success.toFixed(2)} → <b>{verdict.after.p_success.toFixed(2)}</b>

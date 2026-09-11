@@ -19,7 +19,7 @@ export function EffortChart({ before, after }: { before: Result | null; after: R
   const data = histogram(before, after);
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-      <div className="mb-1 text-sm font-semibold">Attacker effort over {before.n} successful-trial samples — before vs after</div>
+      <div className="mb-1 text-sm font-semibold">Attacker effort per successful trial ({before.n} seeded trials each) — before vs after</div>
       <div className="mb-3 text-xs text-slate-400">
         Path count says how many routes exist; this says how much the routes the attacker actually picks cost.
         mean {before.mean_effort?.toFixed(1) ?? "—"} → {after.mean_effort?.toFixed(1) ?? "—"} · p90 {before.p90_effort?.toFixed(1) ?? "—"} → {after.p90_effort?.toFixed(1) ?? "—"} ·

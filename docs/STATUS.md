@@ -18,4 +18,5 @@
 | Mechanical rehearsal | load 18 ms · paths 13 · simulate 17 · evaluate cold 8 / cached 9 · optimise b=12 57 · sync 6 · blast 5 · matrix 94 |
 | Demo polish | graph no longer zooms when the page scrolls (`zoomOnScroll={false}`) |
 | Bug bash: insider profile | 2 paths, 3-hop favourite, scoped segmentation DEPLOY +49%; card/graph render |
+| Bug-fix pass | (1) invariant re-stated and tested for all 8 controls x 2 agents: no route p_route rises, best route never rises, naive count never rises; (2) `/evaluate-change` 422 on empty proposal; (3) negative effort in amber; (4) reset clears the since-last-twin delta; (5) error banner clears on success; (6) blast panel separates "can exfiltrate to internet"; (7) histogram caption; (8) INTERFACES/CLAUDE §7/GOVERNANCE tree match the code; branch is `main` everywhere |
 | Slides | content prepared in `docs/SLIDES.md`; screenshots for backup slides 4–6 still to take |

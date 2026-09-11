@@ -234,3 +234,37 @@ def test_diff_statistics_and_substituted_paths(compiled_test_edges, test_agent, 
     assert delta.naive_path_reduction_pct == 0.0
     assert len(delta.substituted_paths) > 0  # Route 2 was adopted after Route 1 was closed
     assert not delta.route_eliminated or len(res_after.effort_distribution) < 20
+
+
+# ---------------------------------------------------------------------
+# Invariant 7 (golden, every catalogue control): a control never makes any route more
+# likely, never raises the best route's success, never adds a naive path.
+# NOTE the selected-route MIX p_success CAN rise (degrade a decoy route and the agent
+# picks the easy one more often) - that is modelled behaviour, not a bug, and the
+# verdict engine treats it as weak gain.
+# ---------------------------------------------------------------------
+def test_control_monotone_on_routes_and_naive_count_golden():
+    from engine.scenario import load_scenario
+    from engine.twin import clone
+    from rules.compile import compile as compile_twin
+    from rules.loader import load_techniques
+
+    sc = load_scenario("golden")
+    tech = load_techniques()
+    for agent in sc.agents:
+        base_inv = search(compile_twin(sc.twin, tech), agent, sc.twin)
+        base_naive = len(search(compile_twin(sc.twin, tech, naive=True), agent, sc.twin).routes)
+        base_p = {tuple((e.src, e.dst, e.technique, e.identity_id) for e in c.route): c.p_route
+                  for c in route_policy(base_inv, agent, k=len(base_inv.routes) or 1)}
+        base_best = max(base_p.values(), default=0.0)
+        for control in sc.catalogue:
+            twin = clone(sc.twin, add_controls=(control,))
+            inv = search(compile_twin(twin, tech), agent, twin)
+            naive = len(search(compile_twin(twin, tech, naive=True), agent, twin).routes)
+            assert naive <= base_naive, (agent.id, control.id)
+            choices = route_policy(inv, agent, k=len(inv.routes) or 1)
+            for c in choices:
+                sig = tuple((e.src, e.dst, e.technique, e.identity_id) for e in c.route)
+                assert sig in base_p, (agent.id, control.id, "control created a route")
+                assert c.p_route <= base_p[sig] + 1e-9, (agent.id, control.id)
+            assert max((c.p_route for c in choices), default=0.0) <= base_best + 1e-9, (agent.id, control.id)

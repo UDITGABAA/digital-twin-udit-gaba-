@@ -24,7 +24,7 @@ export default function App() {
 
   const refresh = useCallback(async (id: string, agent: string) => {
     const [g, c, b, p] = await Promise.all([api.graph(id), api.controls(id), api.simulate(id, agent), api.paths(id, agent)]);
-    setGraph(g); setCatalogue(c.catalogue); setBaseline(b); setPaths(p); setTwinId(g.twin_id);
+    setGraph(g); setCatalogue(c.catalogue); setBaseline(b); setPaths(p); setTwinId(g.twin_id); setError(null);
   }, []);
 
   useEffect(() => {
@@ -43,8 +43,8 @@ export default function App() {
 
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
-  const loadScenario = async (name: string) => {
-    setPrev(baseline ? { p: baseline.p_success, risk: baseline.weighted_risk } : null);
+  const loadScenario = async (name: string, reset = false) => {
+    setPrev(!reset && baseline ? { p: baseline.p_success, risk: baseline.weighted_risk } : null);
     await api.load(name);
     setScenario(name); setPicked([]); setVerdict(null); setRoute(null); setBlast(null);
     await refresh("current", agentId);
@@ -75,7 +75,7 @@ export default function App() {
           <select value={agentId} onChange={(e) => { setAgentId(e.target.value); refresh(twinId, e.target.value); }} className="rounded bg-slate-800 px-2 py-1">
             {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
-          <button onClick={() => loadScenario("golden")} className="ml-3 rounded border border-slate-600 px-2 py-1 text-xs hover:bg-slate-800">reset demo</button>
+          <button onClick={() => loadScenario("golden", true)} className="ml-3 rounded border border-slate-600 px-2 py-1 text-xs hover:bg-slate-800">reset demo</button>
         </div>
       </header>
 
@@ -114,7 +114,8 @@ export default function App() {
           {blast && (
             <div className="rounded-xl border border-slate-800 bg-slate-900 p-3 text-sm">
               <b>Blast radius of {blast.asset_id}</b>: with its sessions and credentials, an attacker reaches{" "}
-              <span className="text-amber-300">{blast.reachable.join(", ") || "nothing"}</span>
+              <span className="text-amber-300">{blast.reachable.filter((a) => graph?.assets.find((x) => x.id === a)?.kind !== "internet").join(", ") || "nothing"}</span>
+              {blast.reachable.some((a) => graph?.assets.find((x) => x.id === a)?.kind === "internet") && <span className="text-slate-400"> (and can exfiltrate to the internet)</span>}
               {blast.crown_jewels_hit.length > 0 && <span className="text-red-300"> — including crown jewel {blast.crown_jewels_hit.join(", ")}</span>}.
               <span className="text-slate-500"> Topological upper bound ignoring credentials: {blast.upper_bound.length} assets.</span>
             </div>

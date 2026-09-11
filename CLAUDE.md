@@ -337,9 +337,10 @@ def search(edges, agent) -> Inventory                                           
 def route_policy(inventory, agent) -> tuple[RouteChoice, ...]                   # engine/walk.py     (A)
 def simulate(twin, agent, n: int, seed: int) -> Result                          # engine/walk.py     (A)
 def diff(before: Result, after: Result) -> Delta                                # engine/results.py  (A)
-def evaluate_change(twin, control_ids, agent_ids, *, seed) -> ChangeVerdict     # rules/evaluate.py (B)  THE centrepiece
-def optimize(twin, budget, agents) -> Portfolio                                 # rules/optimize.py (B)
-def blast_radius(twin, asset_id) -> Blast                                       # engine/blast.py    (A)
+def evaluate_change(scenario, control_ids, agent_ids, *, twin=None, seed, n) -> ChangeVerdict   # rules/evaluate.py (B)  THE centrepiece
+def optimize(scenario, budget, agent_ids, *, twin=None) -> Portfolio            # rules/optimize.py (B)
+def blast_radius(twin, edges, asset_id) -> Blast                                # engine/blast.py  (A)
+def load_scenario(name) -> Scenario(twin, agents, catalogue)                    # engine/scenario.py
 ```
 
 `Result`: `p_success`, `p_success_ci` (Wilson 95%), `effort_distribution`, `mean_effort`
@@ -419,8 +420,12 @@ GET  /blast-radius/{asset_id}  GET  /lineage/{twin_id}
    answers, including one path reachable **only** after collecting a credential two hops
    earlier. **Written BEFORE the pathfinder exists.** The pathfinder fails silently when
    wrong: it returns plausible output and every downstream number is then confidently false.
-2. `tests/test_invariants.py` (A) — adding a control never increases attacker success;
-   `clone` never mutates its input; same seed produces identical output.
+2. `tests/test_invariants.py` (A) — a control never raises any route's `p_route`, never
+   raises the best route's `p_route`, never adds a naive path (checked for every catalogue
+   control on golden); `clone` never mutates its input; same seed produces identical output.
+   **The selected-route mix `p_success` CAN rise** when a control degrades a decoy route and
+   the agent picks the easy one more often — modelled behaviour, surfaced as weak gain →
+   REVIEW, never hidden.
 3. `tests/test_rules.py` (B) — compile never invents a transition; the scoped-segmentation
    case (ws-hr denied, backup-01 allowed); every technique has an ATT&CK ID.
 4. `tests/test_evaluate.py` (B) — verdict rules, confidence levels, `undetermined`,
