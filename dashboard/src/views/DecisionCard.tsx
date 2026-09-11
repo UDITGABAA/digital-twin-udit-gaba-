@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { ArrowRight, Path } from "@phosphor-icons/react";
+import { ArrowRight, Path, CheckCircle, ArrowDown, MagnifyingGlass } from "@phosphor-icons/react";
 import type { ChangeVerdict, Control, Route } from "../types";
 
 const VERDICT = {
@@ -14,9 +14,9 @@ export const routeText = (r: Route) =>
 const pct = (v: number | null, eliminated: boolean) =>
   eliminated ? "route eliminated" : v === null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(0)}%`;
 
-export function DecisionCard({ verdict, catalogue, onPick, onHighlight }: {
+export function DecisionCard({ verdict, catalogue, onPick, onAdopt, onHighlight }: {
   verdict: ChangeVerdict | null; catalogue: Control[];
-  onPick: (ids: string[]) => void; onHighlight: (r: Route | null) => void;
+  onPick: (ids: string[]) => void; onAdopt: () => void; onHighlight: (r: Route | null) => void;
 }) {
   const name = (id: string) => catalogue.find((c) => c.id === id)?.name ?? id;
 
@@ -66,6 +66,32 @@ export function DecisionCard({ verdict, catalogue, onPick, onHighlight }: {
             </div>
           </div>
           <p className="mt-3 max-w-[60ch] text-[15px] text-muted">{v.sentence}</p>
+
+          {/* What happens next. Nothing on this page changes the twin until you adopt. */}
+          <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-line bg-raised px-4 py-3 text-sm">
+            {verdict.recommendation === "deploy" && (
+              <>
+                <span className="text-text">Nothing has changed yet. Adopt it and the twin, the numbers above and the attacker's routes all update — a child twin, with the parent kept.</span>
+                <button className="btn btn-ink ml-auto" onClick={onAdopt}><CheckCircle weight="bold" />Adopt into twin</button>
+              </>
+            )}
+            {verdict.recommendation === "review" && (
+              <>
+                <MagnifyingGlass weight="bold" className="text-yellow-ink" />
+                <span className="text-text">Not adoptable as is. {verdict.confidence.unknowns.length ? `Verify the ${verdict.confidence.unknowns.length} inferred item${verdict.confidence.unknowns.length > 1 ? "s" : ""} listed under Confidence, ` : ""}
+                  {verdict.broken_flows.length ? "decide whether the affected flow can be re-routed, " : ""}
+                  {verdict.delta.effort_increase_pct !== null && verdict.delta.effort_increase_pct < 5 && !verdict.delta.route_eliminated ? "or pair it with a control that closes the route it leaves open, " : ""}
+                  then re-run.</span>
+                <button className="btn ml-auto" onClick={onAdopt} title="adopt anyway - the caveats stay in the lineage">Adopt anyway</button>
+              </>
+            )}
+            {verdict.recommendation === "blocked" && (
+              <>
+                <ArrowDown weight="bold" className="text-red-ink" />
+                <span className="text-text">Do not deploy this. {verdict.alternatives.length ? "The safer option below gets most of the security gain without cutting a P1/P2 flow — pick it and adopt that instead." : "Scope the rule so the affected flows are excepted, then re-run."}</span>
+              </>
+            )}
+          </div>
 
           <dl className="mt-7 grid grid-cols-[8.5rem_1fr] gap-y-4 border-t border-line pt-6 text-sm">
             <dt className="label pt-1">Security</dt>

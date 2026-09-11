@@ -13,6 +13,7 @@ export const api = {
   scenarios: () => call<{ scenarios: string[]; current: string }>("/scenarios"),
   load: (name: string) => post<Twin>(`/scenarios/${name}/load`, {}),
   twin: (id: string) => call<Twin>(`/twin/${id}`),
+  clone: (twin_id: string, control_ids: string[], label: string) => post<Twin>(`/twin/${twin_id}/clone`, { control_ids, label }),
   graph: (id: string) => call<Graph>(`/graph/${id}`),
   agents: () => call<Agent[]>("/agents"),
   paths: (id: string, agent_id: string) => call<{ naive_count: number; count: number; routes: Route[] }>(`/paths/${id}?agent_id=${agent_id}`),

@@ -77,8 +77,14 @@ budget, and how sure are we?*
 **The hero screen is a decision, not a graph.** Everything else is a supporting panel — with one
 authored moment beside it: **Run attack** replays the first seeded trials step by step (route
 choice, each roll against `p_success`, noise filling toward the detection budget, the node
-turning ember when breached) on the same RNG stream as the 1,000-trial statistics. What you
+turning orange when breached) on the same RNG stream as the 1,000-trial statistics. What you
 watch *is* the statistics.
+
+**Nothing on the page changes the twin until the user adopts.** Every verdict says what
+happens next in plain words: DEPLOY offers **Adopt into twin** (child twin, parent kept,
+numbers move, chip shows *applied*, one-click revert); REVIEW names what to verify and
+allows *adopt anyway*; BLOCK points at the safer option. Adopting never deploys anything
+real and the notice says so.
 
 ```
 Proposed        Segment prod-db (deny all inbound)

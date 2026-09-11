@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ArrowsClockwise, Warning, ShieldCheck } from "@phosphor-icons/react";
+import { ArrowsClockwise, Warning, ShieldCheck, ArrowUUpLeft, CheckCircle } from "@phosphor-icons/react";
 import { api } from "./api/client";
 import type { Agent, Blast, ChangeVerdict, Control, Graph, Result, Route, Trial } from "./types";
 import { DecisionCard } from "./views/DecisionCard";
@@ -30,12 +30,15 @@ export default function App() {
   const [replay, setReplay] = useState<ReplayState | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [applied, setApplied] = useState<Control[]>([]);
+  const [history, setHistory] = useState<{ id: string; label: string }[]>([]);   // adopted twins, oldest first
+  const [notice, setNotice] = useState<string | null>(null);
 
   const agent = agents.find((a) => a.id === agentId) ?? null;
 
   const refresh = useCallback(async (id: string, ag: string) => {
     const [g, c, b, p] = await Promise.all([api.graph(id), api.controls(id), api.simulate(id, ag), api.paths(id, ag)]);
-    setGraph(g); setCatalogue(c.catalogue); setBaseline(b); setPaths(p); setTwinId(g.twin_id); setError(null);
+    setGraph(g); setCatalogue(c.catalogue); setApplied(c.applied); setBaseline(b); setPaths(p); setTwinId(g.twin_id); setError(null);
   }, []);
 
   useEffect(() => {
@@ -58,7 +61,31 @@ export default function App() {
     setPrev(!reset && baseline ? { p: baseline.p_success, risk: baseline.weighted_risk } : null);
     await api.load(name);
     setScenario(name); setPicked([]); setVerdict(null); setRoute(null); setBlast(null); setTrials(null); setReplay(null);
+    setHistory([]); setNotice(null);
     await refresh("current", agentId);
+  };
+
+  /* Adopting a change is the only action that alters the twin. Everything else is a what-if.
+     The child twin becomes current; the top numbers move; the chips show the control as applied. */
+  const adopt = async () => {
+    if (!verdict) return;
+    const label = verdict.control_ids.map((id) => catalogue.find((c) => c.id === id)?.name ?? id).join(" + ");
+    setPrev(baseline ? { p: baseline.p_success, risk: baseline.weighted_risk } : null);
+    const child = await api.clone(twinId, verdict.control_ids, label);
+    setHistory((h) => [...h, { id: twinId, label: h.length ? "previous twin" : scenario === "golden" ? "FinBank" : "FinBank after sync" }]);
+    setPicked([]); setVerdict(null); setRoute(null); setTrials(null); setReplay(null); setBlast(null);
+    setNotice(`Adopted: ${label}. The twin now includes it; the numbers above are the new baseline. Nothing was deployed anywhere real.`);
+    await refresh(child.id, agentId);
+  };
+
+  const undo = async () => {
+    const last = history[history.length - 1];
+    if (!last) return;
+    setPrev(baseline ? { p: baseline.p_success, risk: baseline.weighted_risk } : null);
+    setHistory((h) => h.slice(0, -1));
+    setPicked([]); setVerdict(null); setRoute(null); setTrials(null); setReplay(null); setBlast(null);
+    setNotice("Reverted to the previous twin.");
+    await refresh(last.id, agentId);
   };
 
   const switchAgent = (id: string) => { setAgentId(id); refresh(twinId, id); };
@@ -98,6 +125,12 @@ export default function App() {
 
       <main id="main" className="mx-auto max-w-[1480px] px-6 pb-16 pt-6">
         {error && <div className="mb-5 flex items-center gap-2 rounded-lg border border-red-ink/30 bg-red-tint px-3 py-2 text-sm text-red-ink"><Warning weight="bold" />{error} — is uvicorn running?</div>}
+        {notice && (
+          <div className="mb-5 flex items-center gap-2 rounded-lg border border-green-ink/30 bg-green-tint px-3 py-2 text-sm text-green-ink" role="status">
+            <CheckCircle weight="fill" />{notice}
+            <button className="ml-auto text-xs underline" onClick={() => setNotice(null)}>dismiss</button>
+          </div>
+        )}
 
         {baseline && (
           <div className="mb-6 flex flex-wrap items-end gap-x-10 gap-y-3">
@@ -110,7 +143,11 @@ export default function App() {
             <Stat label="favourite route" sub={baseline.routes[0] ? `p_select ${baseline.routes[0].p_select.toFixed(2)}` : undefined}>
               <span className="mono text-[12px] font-normal text-text">{baseline.routes[0] ? baseline.routes[0].route.map((e) => e.technique).join(" › ") : "none"}</span>
             </Stat>
-            <span className="mono ml-auto text-[11px] text-faint">twin {twinId.slice(0, 10)} · seed 1 · 1,000 trials</span>
+            <span className="ml-auto flex items-center gap-3 text-[11px] text-faint">
+              {history.length > 0 && <span>{[...history.map((h) => h.label), applied.map((c) => c.name).slice(-1)[0] ?? "current"].join(" → ")}</span>}
+              <span className="mono">twin {twinId.slice(0, 10)} · seed 1 · 1,000 trials</span>
+              {history.length > 0 && <button className="btn btn-icon" onClick={undo} aria-label="revert to previous twin" title="revert to previous twin"><ArrowUUpLeft weight="bold" /></button>}
+            </span>
           </div>
         )}
 
@@ -120,16 +157,21 @@ export default function App() {
             {picked.length > 0 && <button onClick={() => setPicked([])} className="text-xs text-muted hover:text-ink">clear</button>}
           </div>
           <div className="flex flex-wrap gap-2">
-            {catalogue.map((c) => (
-              <button key={c.id} type="button" className="chip" aria-pressed={picked.includes(c.id)} onClick={() => toggle(c.id)}>
-                <span>{c.name}</span><span className="cost">cost {c.cost}</span>
-              </button>
-            ))}
+            {catalogue.map((c) => {
+              const isApplied = applied.some((a) => a.id === c.id);
+              return (
+                <button key={c.id} type="button" className="chip" aria-pressed={picked.includes(c.id)} disabled={isApplied} onClick={() => toggle(c.id)}
+                  title={isApplied ? "already part of this twin" : undefined} style={isApplied ? { opacity: 0.55, cursor: "default" } : undefined}>
+                  <span>{c.name}</span>
+                  {isApplied ? <span className="tag tag-green">applied</span> : <span className="cost">cost {c.cost}</span>}
+                </button>
+              );
+            })}
           </div>
         </section>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-          <DecisionCard verdict={verdict} catalogue={catalogue} onPick={setPicked} onHighlight={(r) => { setRoute(r); setTrials(null); setReplay(null); }} />
+          <DecisionCard verdict={verdict} catalogue={catalogue} onPick={setPicked} onAdopt={adopt} onHighlight={(r) => { setRoute(r); setTrials(null); setReplay(null); }} />
           <Replay trials={trials} noiseBudget={agent?.noise_budget ?? 3} running={running} onRun={runAttack} onState={setReplay}
             label={`${agent?.name ?? agentId} against ${proposalLabel}`} />
         </div>
