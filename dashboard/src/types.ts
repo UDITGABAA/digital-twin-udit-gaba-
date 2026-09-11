@@ -29,3 +29,6 @@ export interface Blast { asset_id: string; reachable: string[]; crown_jewels_hit
 
 export interface GraphEdge { src: string; dst: string; technique: string; attck: string; identities: string[]; p_success: number; evidence: Evidence }
 export interface Graph { twin_id: string; assets: Asset[]; identities: Identity[]; grants: PrivilegeGrant[]; attack_edges: GraphEdge[]; flows: ServiceFlow[]; controls: Control[] }
+
+export interface Step { src: string; dst: string; technique: string; identity_id: string | null; attempt: number; roll: number | null; p_success: number; succeeded: boolean; detected: boolean; effort_so_far: number; noise_so_far: number }
+export interface Trial { index: number; route_index: number; success: boolean; detected: boolean; effort: number; noise: number; steps: Step[] }

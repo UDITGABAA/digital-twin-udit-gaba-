@@ -58,7 +58,11 @@ def route_policy(inventory: Inventory, agent: Agent, *, k: int = 5) -> tuple[Rou
     # DETERMINISTIC. p_edge_eff = 1-(1-p)^3; p_route = Π p_edge_eff; effort_score = Σ cost/p;
     # drop noise > agent.noise_budget; top-k by p_route/effort_score; p_select ∝ u**(1+4*skill); Σ p_select = 1
 def simulate(edges: tuple[CompiledEdge, ...], agent: Agent, twin: Twin, n: int, seed: int) -> Result
-    # calls search (cached by (hash(edges), agent.id)) once, route_policy once, then n trials.
+    # calls search (cached by (twin_hash, edge signature, agent.id)) once, route_policy once, then n trials.
+class Step(BaseModel, frozen=True):   # one attempt on one edge: attempt, roll, p_success, succeeded, detected, effort_so_far, noise_so_far
+class Trial(BaseModel, frozen=True):  # index, route_index, success, detected, effort, noise, steps
+def trace(edges, agent, twin, seed, k=12) -> tuple[Trial, ...]
+    # the first k trials of simulate(..., seed) step by step - SAME RNG stream, so trial i is trial i of the statistics
 
 # results.py
 class Result(BaseModel, frozen=True):
@@ -140,6 +144,7 @@ POST /twin/{id}/clone                    {control_ids?, add_grants?, label?} -> 
 GET  /graph/{id}                         -> {assets, identities, grants, attack_edges[{src,dst,technique,attck,identities,p_success,evidence}], flows, controls}
 GET  /paths/{id}?agent_id=               -> {naive_count, count, routes}   (attack path discovery)
 POST /simulate                           {twin_id, agent_id, n, seed} -> Result
+POST /trace                              {twin_id, agent_id, control_ids?, k?, seed?} -> [Trial]   (attack replay; k <= 200)
 POST /evaluate-change                    {twin_id, control_ids, agent_ids, seed?, n?} -> ChangeVerdict   (422 if control_ids empty)
 POST /optimize                           {twin_id, budget, agent_ids} -> Portfolio
 GET  /matrix/{id}?seed&n                 -> {agents, rows[{control_id, name, cost, broken_flows, cells[{agent_id, effort_increase_pct, route_eliminated, p_success_delta, recommendation}]}]}

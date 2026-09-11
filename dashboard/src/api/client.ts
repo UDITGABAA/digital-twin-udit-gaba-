@@ -1,4 +1,4 @@
-import type { Agent, Blast, ChangeVerdict, Control, Graph, Portfolio, Result, Route, Twin } from "../types";
+import type { Agent, Blast, ChangeVerdict, Control, Graph, Portfolio, Result, Route, Trial, Twin } from "../types";
 
 const BASE = "/api";
 
@@ -22,4 +22,6 @@ export const api = {
     post<ChangeVerdict>("/evaluate-change", { twin_id, control_ids, agent_ids, seed }),
   optimize: (twin_id: string, budget: number, agent_ids: string[]) => post<Portfolio>("/optimize", { twin_id, budget, agent_ids }),
   blast: (twin_id: string, asset_id: string) => call<Blast>(`/blast-radius/${twin_id}/${asset_id}`),
+  trace: (twin_id: string, agent_id: string, control_ids: string[], k = 12, seed = 1) =>
+    post<Trial[]>("/trace", { twin_id, agent_id, control_ids, k, seed }),
 };

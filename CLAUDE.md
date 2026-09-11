@@ -74,7 +74,11 @@ Not "another tool that finds attack paths." A **security change sandbox**.
 The decision we serve is the change advisory board's: *what can I deploy safely, within
 budget, and how sure are we?*
 
-**The hero screen is a decision, not a graph.** Everything else is a supporting panel.
+**The hero screen is a decision, not a graph.** Everything else is a supporting panel — with one
+authored moment beside it: **Run attack** replays the first seeded trials step by step (route
+choice, each roll against `p_success`, noise filling toward the detection budget, the node
+turning ember when breached) on the same RNG stream as the 1,000-trial statistics. What you
+watch *is* the statistics.
 
 ```
 Proposed        Segment prod-db (deny all inbound)
@@ -394,8 +398,11 @@ non-interactive service identities."* Never "service accounts cannot MFA".
   NetworkX for authoring and the blast-radius upper bound only — flatten to `CompiledEdge`
   tuples before any simulation loop.
 - **No database.** JSON files + in-memory dict keyed by twin hash.
-- Frontend: React 18, TypeScript, Vite, Tailwind, React Flow (graph), Recharts (the
-  overlaid attacker-effort histograms — the thesis made visible).
+- Frontend: React 19, TypeScript, Vite, Tailwind v4, React Flow (graph), Recharts (the
+  overlaid attacker-effort histograms — the thesis made visible), `motion` for the replay
+  feed, lucide icons. Design: Operate mode (impeccable), Dark Security register (taste-skill) —
+  navy-black lacquer, ember = attacker, verdigris = legitimate business, gold = crown jewel,
+  signal blue = selection; one typeface (Inter); no emoji as icons.
 - **Run on localhost. Do not deploy.** Two terminals, `uvicorn` + `vite` (`scripts/demo.ps1`
   starts both). If Vite dies, `uvicorn` alone serves the built dashboard at `:8000`. Second
   laptop as hot backup.

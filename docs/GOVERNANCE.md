@@ -48,7 +48,7 @@ digital-twin/                     (repo: UDITGABAA/digital-twin-udit-gaba-, bran
 │   └── optimize.py               risk() (deterministic upper bound) + exhaustive constrained optimize()
 │
 ├── server/
-│   └── app.py                    ══ D ══ FastAPI; router at "" and "/api"; serves dashboard/dist at "/" if built
+│   └── app.py                    ══ D ══ FastAPI; router at "" and "/api" (incl. /trace); serves dashboard/dist at "/" if built
 │
 ├── scenarios/                    ══ D ══
 │   ├── golden.json               FinBank
@@ -61,10 +61,12 @@ digital-twin/                     (repo: UDITGABAA/digital-twin-udit-gaba-, bran
 │
 └── dashboard/                    ══ C ══ Vite + React + TS + Tailwind; /api proxied to :8000
     └── src/
+        ├── index.css             design tokens (ink / ember / verdigris / gold / signal), panel + node states
         ├── types.ts              hand-written mirror of the Pydantic models
         ├── api/client.ts
-        ├── App.tsx               state, control picker, scenario/adversary switch, status bar
-        └── views/                DecisionCard (hero) · GraphView · EffortChart · OptimizerPanel
+        ├── App.tsx               state, control rail, scenario/adversary switch, status bar
+        └── views/                DecisionCard (hero) · Replay (attack replay, the authored moment) · Stage (zone-lane graph
+                                  with breach states) · EffortChart · OptimizerPanel
 ```
 
 Only **three** files are ever touched by more than one person: `CLAUDE.md`,

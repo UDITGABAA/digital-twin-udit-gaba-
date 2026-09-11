@@ -121,6 +121,78 @@ def route_policy(
     return tuple(choices)
 
 
+class Step(BaseModel, frozen=True):
+    """One attempt on one edge, as the replay shows it."""
+    src: str
+    dst: str
+    technique: str
+    identity_id: Optional[str]
+    attempt: int                 # 1..3
+    roll: Optional[float]        # None when detected before rolling
+    p_success: float
+    succeeded: bool
+    detected: bool
+    effort_so_far: float
+    noise_so_far: float
+
+
+class Trial(BaseModel, frozen=True):
+    index: int
+    route_index: int
+    success: bool
+    detected: bool
+    effort: float
+    noise: float
+    steps: tuple[Step, ...]
+
+
+def _run_trial(rng: random.Random, choices: tuple[RouteChoice, ...], weights: list[float], agent: Agent, index: int = 0) -> Trial:
+    """The ONE trial loop. simulate() aggregates it n times; trace() returns it verbatim.
+    RNG call order: one rng.choices() for the route, then one rng.random() per attempt."""
+    chosen_idx = rng.choices(range(len(choices)), weights=weights, k=1)[0]
+    route = choices[chosen_idx].route
+    effort = 0.0
+    noise = 0.0
+    steps: list[Step] = []
+    success = True
+    detected = False
+    for edge in route:
+        edge_ok = False
+        for attempt in range(1, 4):
+            effort += edge.cost
+            noise += edge.noise
+            if noise > agent.noise_budget:
+                detected = True
+                steps.append(Step(src=edge.src, dst=edge.dst, technique=edge.technique, identity_id=edge.identity_id,
+                                  attempt=attempt, roll=None, p_success=edge.p_success, succeeded=False, detected=True,
+                                  effort_so_far=effort, noise_so_far=noise))
+                break
+            roll = rng.random()
+            edge_ok = roll < edge.p_success
+            steps.append(Step(src=edge.src, dst=edge.dst, technique=edge.technique, identity_id=edge.identity_id,
+                              attempt=attempt, roll=round(roll, 4), p_success=edge.p_success, succeeded=edge_ok, detected=False,
+                              effort_so_far=effort, noise_so_far=noise))
+            if edge_ok:
+                break
+        if not edge_ok:
+            success = False
+            break
+    return Trial(index=index, route_index=chosen_idx, success=success, detected=detected,
+                 effort=effort, noise=round(noise, 4), steps=tuple(steps))
+
+
+def trace(edges: tuple[CompiledEdge, ...], agent: Agent, twin: Twin, seed: int, k: int = 12) -> tuple[Trial, ...]:
+    """The first k trials of simulate(edges, agent, twin, n, seed), step by step, for the replay.
+    Same seed, same RNG stream: trial i here is trial i of the simulation."""
+    inventory = search(edges, agent, twin)
+    choices = route_policy(inventory, agent)
+    if not choices:
+        return ()
+    rng = random.Random(seed)
+    weights = [c.p_select for c in choices]
+    return tuple(_run_trial(rng, choices, weights, agent, i) for i in range(k))
+
+
 def simulate(
     edges: tuple[CompiledEdge, ...],
     agent: Agent,
@@ -166,46 +238,13 @@ def simulate(
     successful_efforts: list[float] = []
 
     for _ in range(n):
-        # 1. Pick route according to p_select
-        chosen_idx = rng.choices(range(len(choices)), weights=p_select_weights, k=1)[0]
-        chosen_choice = choices[chosen_idx]
-        route_attempts[chosen_idx] += 1
-
-        # 2. Execute edge by edge (up to 3 attempts each)
-        trial_effort = 0.0
-        cumulative_noise = 0.0
-        route_succeeded = True
-        trial_edges_visited = set()
-
-        for edge in chosen_choice.route:
-            edge_key = (edge.src, edge.dst, edge.technique)
-            edge_succeeded = False
-
-            for attempt in range(1, 4):
-                trial_effort += edge.cost
-                cumulative_noise += edge.noise
-                trial_edges_visited.add(edge_key)
-
-                # Attacker detected if noise budget exceeded
-                if cumulative_noise > agent.noise_budget:
-                    edge_succeeded = False
-                    break
-
-                roll = rng.random()
-                if roll < edge.p_success:
-                    edge_succeeded = True
-                    break
-
-            if not edge_succeeded:
-                route_succeeded = False
-                break
-
-        for ek in trial_edges_visited:
+        t = _run_trial(rng, choices, p_select_weights, agent)
+        route_attempts[t.route_index] += 1
+        for ek in {(st.src, st.dst, st.technique) for st in t.steps}:
             edge_traversal_counts[ek] = edge_traversal_counts.get(ek, 0) + 1
-
-        if route_succeeded:
-            route_successes[chosen_idx] += 1
-            successful_efforts.append(trial_effort)
+        if t.success:
+            route_successes[t.route_index] += 1
+            successful_efforts.append(t.effort)
 
     # Statistics
     succ_count = len(successful_efforts)
@@ -280,7 +319,10 @@ def simulate(
 
 __all__ = [
     "RouteChoice",
+    "Step",
+    "Trial",
     "route_policy",
     "simulate",
+    "trace",
     "clear_search_cache",
 ]

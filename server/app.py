@@ -15,7 +15,7 @@ from engine.results import Result
 from engine.scenario import Scenario, list_scenarios, load_scenario
 from engine.search import SearchBudgetExceeded, search
 from engine.twin import clone
-from engine.walk import simulate
+from engine.walk import Trial, simulate, trace
 from rules.compile import compile
 from rules.evaluate import ChangeVerdict, evaluate_change
 from rules.loader import load_techniques
@@ -165,6 +165,30 @@ def run_simulate(req: SimulateRequest) -> Result:
     twin = _twin(req.twin_id)
     try:
         return simulate(compile(twin, TECH), _agent(req.agent_id), twin, req.n, req.seed)
+    except SearchBudgetExceeded as e:
+        raise HTTPException(409, str(e))
+
+
+class TraceRequest(BaseModel):
+    twin_id: str = "current"
+    agent_id: str = "external"
+    seed: int = 1
+    k: int = 12
+    control_ids: tuple[str, ...] = ()      # replay against the twin with these controls applied
+
+
+@api.post("/trace")
+def run_trace(req: TraceRequest) -> tuple[Trial, ...]:
+    """The first k trials of the seeded simulation, step by step, for the attack replay."""
+    twin = _twin(req.twin_id)
+    if req.control_ids:
+        cat = {c.id: c for c in SCENARIO.catalogue}
+        try:
+            twin = clone(twin, add_controls=tuple(cat[c] for c in req.control_ids))
+        except KeyError as e:
+            raise HTTPException(422, f"unknown control {e}")
+    try:
+        return trace(compile(twin, TECH), _agent(req.agent_id), twin, req.seed, min(req.k, 200))
     except SearchBudgetExceeded as e:
         raise HTTPException(409, str(e))
 

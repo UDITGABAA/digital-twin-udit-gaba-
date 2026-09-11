@@ -1,2 +1,102 @@
 @import "tailwindcss";
 @import "@xyflow/react/dist/style.css";
+
+/* One world: navy-black lacquer, ember for the attacker, verdigris for legitimate business,
+   gold only for the crown jewel, signal blue for selection/primary action. One typeface. */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-ink-950: #070b14;
+  --color-ink-900: #0c1220;
+  --color-ink-850: #0f1727;
+  --color-ink-800: #131d31;
+  --color-ink-700: #1d2a44;
+  --color-ink-600: #2b3b5c;
+
+  --color-fg: #e8edf7;
+  --color-fg-muted: #9fadc8;
+  --color-fg-faint: #6c7b99;
+
+  --color-ember: #ff6a3d;
+  --color-ember-soft: #ff9b7a;
+  --color-ember-deep: #b53d1c;
+  --color-verdigris: #3fd3b5;
+  --color-verdigris-deep: #167a68;
+  --color-gold: #ecc86b;
+  --color-signal: #7ea6ff;
+  --color-signal-deep: #2f5bd6;
+
+  --color-block: #f0463c;
+  --color-review: #f2b233;
+  --color-deploy: #3fd3b5;
+
+  --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.03) inset, 0 12px 32px -18px rgb(0 0 0 / 0.8);
+  --shadow-lift: 0 18px 40px -20px rgb(0 0 0 / 0.9), 0 0 0 1px rgb(126 166 255 / 0.12);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root { color-scheme: dark; }
+
+html, body { background: var(--color-ink-950); color: var(--color-fg); }
+body { font-family: var(--font-sans); font-feature-settings: "cv11", "ss01", "tnum"; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+
+::selection { background: color-mix(in oklab, var(--color-signal) 35%, transparent); }
+*:focus-visible { outline: 2px solid var(--color-signal); outline-offset: 2px; border-radius: 6px; }
+
+* { scrollbar-width: thin; scrollbar-color: var(--color-ink-600) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: var(--color-ink-600); border-radius: 8px; }
+
+/* Panels: one shape, one shadow, everywhere. */
+.panel { background: var(--color-ink-900); border: 1px solid var(--color-ink-700); border-radius: 14px; box-shadow: var(--shadow-panel); }
+.panel-raised { background: var(--color-ink-850); border: 1px solid var(--color-ink-700); border-radius: 10px; }
+.label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-fg-faint); font-weight: 600; }
+.mono { font-family: ui-monospace, "JetBrains Mono", "Cascadia Code", Consolas, monospace; font-size: 12px; }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600;
+       border: 1px solid var(--color-ink-600); background: var(--color-ink-800); color: var(--color-fg); cursor: pointer;
+       transition: background 160ms var(--ease-out-expo), border-color 160ms var(--ease-out-expo), transform 160ms var(--ease-out-expo); }
+.btn:hover { background: var(--color-ink-700); border-color: var(--color-ink-600); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--color-signal-deep); border-color: var(--color-signal-deep); color: white; }
+.btn-primary:hover { background: color-mix(in oklab, var(--color-signal-deep) 85%, white); }
+.btn-ember { background: var(--color-ember-deep); border-color: var(--color-ember-deep); color: white; }
+.btn-ember:hover { background: color-mix(in oklab, var(--color-ember-deep) 80%, white); }
+
+/* Graph stage */
+.react-flow { background: transparent !important; }
+.react-flow__attribution { display: none; }
+.rf-node { border-radius: 10px; padding: 8px 10px; width: 176px; font-size: 12px; line-height: 1.25;
+           background: var(--color-ink-800); border: 1px solid var(--color-ink-600); color: var(--color-fg);
+           transition: border-color 200ms var(--ease-out-expo), box-shadow 200ms var(--ease-out-expo), opacity 200ms var(--ease-out-expo), background 200ms var(--ease-out-expo); }
+.rf-node .name { font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.rf-node .meta { color: var(--color-fg-muted); font-size: 11px; margin-top: 2px; }
+.rf-node.crown { border-color: color-mix(in oklab, var(--color-gold) 70%, transparent); }
+.rf-node.dim { opacity: 0.35; }
+.rf-node.on-route { border-color: color-mix(in oklab, var(--color-ember) 60%, transparent); }
+.rf-node.breached { background: color-mix(in oklab, var(--color-ember-deep) 45%, var(--color-ink-800)); border-color: var(--color-ember);
+                    box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-ember) 22%, transparent), 0 8px 28px -12px var(--color-ember); }
+.rf-node.active { animation: ring 900ms var(--ease-out-expo) infinite; }
+.rf-node.reach { border-color: var(--color-gold); box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-gold) 25%, transparent); }
+.rf-node.start { border-color: var(--color-signal); }
+@keyframes ring { 0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-ember) 55%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
+
+.lane { position: absolute; top: 0; bottom: 0; border-left: 1px dashed var(--color-ink-700); pointer-events: none; }
+.lane .lane-label { position: absolute; top: 10px; left: 10px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-fg-faint); }
+
+/* Noise meter */
+.meter { height: 8px; border-radius: 999px; background: var(--color-ink-700); overflow: hidden; }
+.meter > div { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--color-verdigris), var(--color-review) 60%, var(--color-block)); transition: width 220ms var(--ease-out-expo); }
+
+/* Replay feed */
+.feed-line { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 8px; font-size: 12.5px; }
+.feed-line.ok { background: color-mix(in oklab, var(--color-verdigris) 8%, transparent); }
+.feed-line.fail { background: color-mix(in oklab, var(--color-review) 10%, transparent); }
+.feed-line.detected { background: color-mix(in oklab, var(--color-block) 14%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .rf-node.active { animation: none; }
+  .react-flow__edge-path { animation: none !important; }
+}

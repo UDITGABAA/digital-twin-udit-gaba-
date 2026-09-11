@@ -6,7 +6,9 @@
 > scenario), `rules/` (loader, compile, evaluate, optimize), `server/app.py`, `dashboard/`
 > (decision card, graph, effort histograms, optimiser, sync, blast radius),
 > `scenarios/golden.json` + `golden_sync.json`, `scripts/build_golden.py`.
-> Cut for solo: `/matrix` view, lineage view, generated `types.ts`, CI, narration cache.
+> Cut for solo: `/matrix` view, lineage view, generated `types.ts`, narration cache (CI was added later).
+> Owner-approved exception to the G4 freeze: the dashboard was redesigned (Operate mode, one
+> authored moment = the attack replay) after hardening; engine numbers unchanged, tests green.
 > Phase 5 so far: fresh-clone regression green, CI added, every run-sheet beat driven through
 > the API in < 100 ms (see `docs/STATUS.md`). Remaining: two timed spoken rehearsals, slides,
 > video fallback, second laptop.

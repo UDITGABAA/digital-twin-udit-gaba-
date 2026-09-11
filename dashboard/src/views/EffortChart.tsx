@@ -15,25 +15,30 @@ function histogram(before: Result, after: Result) {
 }
 
 export function EffortChart({ before, after }: { before: Result | null; after: Result | null }) {
-  if (!before || !after) return null;
+  if (!before || !after) {
+    return (
+      <div className="panel p-4 text-sm text-fg-muted">
+        <div className="label">Attacker effort</div>
+        <div className="mt-2">Propose a change to compare the before/after effort distributions — path count says how many routes exist; this says what the routes the attacker actually picks cost.</div>
+      </div>
+    );
+  }
   const data = histogram(before, after);
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-      <div className="mb-1 text-sm font-semibold">Attacker effort per successful trial ({before.n} seeded trials each) — before vs after</div>
-      <div className="mb-3 text-xs text-slate-400">
-        Path count says how many routes exist; this says how much the routes the attacker actually picks cost.
-        mean {before.mean_effort?.toFixed(1) ?? "—"} → {after.mean_effort?.toFixed(1) ?? "—"} · p90 {before.p90_effort?.toFixed(1) ?? "—"} → {after.p90_effort?.toFixed(1) ?? "—"} ·
-        successes {before.effort_distribution.length} → {after.effort_distribution.length}
+    <div className="panel p-4">
+      <div className="label">Attacker effort per successful trial</div>
+      <div className="mt-1 text-sm text-fg-muted">
+        mean {before.mean_effort?.toFixed(1) ?? "—"} → <b className="text-fg">{after.mean_effort?.toFixed(1) ?? "—"}</b> · p90 {before.p90_effort?.toFixed(1) ?? "—"} → <b className="text-fg">{after.p90_effort?.toFixed(1) ?? "—"}</b> · successes {before.effort_distribution.length} → <b className="text-fg">{after.effort_distribution.length}</b> of {before.n}
       </div>
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={data} barGap={-14}>
-          <CartesianGrid stroke="#1e293b" />
-          <XAxis dataKey="bucket" tick={{ fill: "#94a3b8", fontSize: 10 }} />
-          <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} />
-          <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #334155" }} />
-          <Legend />
-          <Bar dataKey="before" fill="#ef4444" fillOpacity={0.55} name="before (successful trials)" />
-          <Bar dataKey="after" fill="#22c55e" fillOpacity={0.7} name="after" />
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={data} barGap={-12} margin={{ top: 12, right: 8, left: -18, bottom: 0 }}>
+          <CartesianGrid stroke="var(--color-ink-700)" vertical={false} />
+          <XAxis dataKey="bucket" tick={{ fill: "var(--color-fg-faint)", fontSize: 10 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fill: "var(--color-fg-faint)", fontSize: 10 }} axisLine={false} tickLine={false} />
+          <Tooltip cursor={{ fill: "rgba(126,166,255,0.06)" }} contentStyle={{ background: "var(--color-ink-850)", border: "1px solid var(--color-ink-700)", borderRadius: 8, fontSize: 12 }} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Bar dataKey="before" fill="var(--color-ember)" fillOpacity={0.5} name="before" radius={[3, 3, 0, 0]} />
+          <Bar dataKey="after" fill="var(--color-verdigris)" fillOpacity={0.75} name="after" radius={[3, 3, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

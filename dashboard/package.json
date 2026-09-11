@@ -2,6 +2,8 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "@xyflow/react": "^12.11.6",
+    "lucide-react": "^1.45.0",
+    "motion": "^13.2.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "recharts": "^3.10.1",
