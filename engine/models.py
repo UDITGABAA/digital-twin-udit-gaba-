@@ -153,7 +153,9 @@ def canonical_repr(val):
 
 def twin_hash(twin: Twin) -> str:
     """Canonical SHA-256 hash of a Twin instance, independent of process set order."""
-    payload = canonical_repr(twin.model_dump())
+    data = twin.model_dump()
+    data.pop("id", None)
+    payload = canonical_repr(data)
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
