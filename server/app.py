@@ -12,7 +12,7 @@ from engine.blast import Blast, blast_radius
 from engine.models import Agent, Control, PrivilegeGrant, Twin
 from engine.results import Result
 from engine.scenario import Scenario, list_scenarios, load_scenario
-from engine.search import SearchBudgetExceeded
+from engine.search import SearchBudgetExceeded, search
 from engine.twin import clone
 from engine.walk import simulate
 from rules.compile import compile
@@ -125,6 +125,22 @@ def graph(twin_id: str) -> dict:
         seen[k]["p_success"] = max(seen[k]["p_success"], e.p_success)
     return {"twin_id": twin.id, "assets": twin.assets, "identities": twin.identities, "grants": twin.grants,
             "attack_edges": list(seen.values()), "flows": twin.flows, "controls": twin.controls}
+
+
+@app.get("/paths/{twin_id}")
+def paths(twin_id: str, agent_id: str = "external") -> dict:
+    """Attack path discovery: the complete inventory (controls treated as perfect = the
+    industry path count) and the routes the agent actually rates highest."""
+    twin = _twin(twin_id)
+    agent = _agent(agent_id)
+    try:
+        naive = search(compile(twin, TECH, naive=True), agent, twin)
+        real = search(compile(twin, TECH), agent, twin)
+    except SearchBudgetExceeded as e:
+        raise HTTPException(409, str(e))
+    return {"twin_id": twin.id, "agent_id": agent.id, "naive_count": len(naive.routes), "count": len(real.routes),
+            "routes": [[{"src": e.src, "dst": e.dst, "technique": e.technique, "identity_id": e.identity_id, "p_success": e.p_success}
+                        for e in r] for r in real.routes]}
 
 
 # --- simulation / decision ------------------------------------------------------------------
