@@ -1,4 +1,4 @@
-import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import type { Result } from "../types";
 
 function histogram(before: Result, after: Result) {
@@ -17,30 +17,35 @@ function histogram(before: Result, after: Result) {
 export function EffortChart({ before, after }: { before: Result | null; after: Result | null }) {
   if (!before || !after) {
     return (
-      <div className="panel p-4 text-sm text-fg-muted">
+      <section className="card p-6">
         <div className="label">Attacker effort</div>
-        <div className="mt-2">Propose a change to compare the before/after effort distributions — path count says how many routes exist; this says what the routes the attacker actually picks cost.</div>
-      </div>
+        <p className="mt-2 max-w-[44ch] text-sm text-muted">Path count says how many routes exist. This says what the routes the attacker actually picks cost — before and after the change.</p>
+      </section>
     );
   }
   const data = histogram(before, after);
   return (
-    <div className="panel p-4">
-      <div className="label">Attacker effort per successful trial</div>
-      <div className="mt-1 text-sm text-fg-muted">
-        mean {before.mean_effort?.toFixed(1) ?? "—"} → <b className="text-fg">{after.mean_effort?.toFixed(1) ?? "—"}</b> · p90 {before.p90_effort?.toFixed(1) ?? "—"} → <b className="text-fg">{after.p90_effort?.toFixed(1) ?? "—"}</b> · successes {before.effort_distribution.length} → <b className="text-fg">{after.effort_distribution.length}</b> of {before.n}
+    <section className="card p-6">
+      <div className="flex items-baseline justify-between gap-4">
+        <div className="label">Attacker effort per successful trial</div>
+        <div className="flex gap-4 text-[11px] text-muted">
+          <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm align-middle" style={{ background: "var(--color-line-strong)" }} />before</span>
+          <span><i className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm align-middle" style={{ background: "var(--color-accent)" }} />after</span>
+        </div>
       </div>
-      <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={data} barGap={-12} margin={{ top: 12, right: 8, left: -18, bottom: 0 }}>
-          <CartesianGrid stroke="var(--color-ink-700)" vertical={false} />
-          <XAxis dataKey="bucket" tick={{ fill: "var(--color-fg-faint)", fontSize: 10 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill: "var(--color-fg-faint)", fontSize: 10 }} axisLine={false} tickLine={false} />
-          <Tooltip cursor={{ fill: "rgba(126,166,255,0.06)" }} contentStyle={{ background: "var(--color-ink-850)", border: "1px solid var(--color-ink-700)", borderRadius: 8, fontSize: 12 }} />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
-          <Bar dataKey="before" fill="var(--color-ember)" fillOpacity={0.5} name="before" radius={[3, 3, 0, 0]} />
-          <Bar dataKey="after" fill="var(--color-verdigris)" fillOpacity={0.75} name="after" radius={[3, 3, 0, 0]} />
+      <div className="mt-1 text-sm text-muted">
+        mean {before.mean_effort?.toFixed(1) ?? "—"} → <b className="text-ink">{after.mean_effort?.toFixed(1) ?? "—"}</b> · p90 {before.p90_effort?.toFixed(1) ?? "—"} → <b className="text-ink">{after.p90_effort?.toFixed(1) ?? "—"}</b> · successes {before.effort_distribution.length} → <b className="text-ink">{after.effort_distribution.length}</b> of {before.n}
+      </div>
+      <ResponsiveContainer width="100%" height={190}>
+        <BarChart data={data} barGap={-10} margin={{ top: 14, right: 4, left: -22, bottom: 0 }}>
+          <CartesianGrid stroke="var(--color-line)" vertical={false} />
+          <XAxis dataKey="bucket" tick={{ fill: "var(--color-faint)", fontSize: 10, fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fill: "var(--color-faint)", fontSize: 10 }} axisLine={false} tickLine={false} />
+          <Tooltip cursor={{ fill: "var(--color-raised)" }} contentStyle={{ background: "var(--color-surface)", border: "1px solid var(--color-line)", borderRadius: 8, fontSize: 12 }} />
+          <Bar dataKey="before" fill="var(--color-line-strong)" name="before" radius={[2, 2, 0, 0]} />
+          <Bar dataKey="after" fill="var(--color-accent)" name="after" radius={[2, 2, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </section>
   );
 }

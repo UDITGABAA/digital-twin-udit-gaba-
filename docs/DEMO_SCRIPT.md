@@ -4,9 +4,10 @@ Numbers below are **pinned by `tests/test_scenario.py`** (seed 1, n = 1000, agen
 criminal crew*). If `pytest` is green, these are the numbers on stage. Rehearsed numbers equal
 stage numbers.
 
-Ports: the dashboard proxies `/api` to `API_PORT` (default 8000); if another checkout is using
-8000/5173 on the same machine, `API_PORT=8001 PORT=5174 npm run dev --prefix dashboard` and
-`uvicorn ... --port 8001`.
+Ports: the dashboard proxies `/api` to `API_PORT` (default 8000). If another checkout is using
+8000/5173 on the same machine: `uvicorn server.app:app --port 8001` and
+`API_PORT=8001 npm run dev --prefix dashboard -- --port 5180 --strictPort` (strictPort so Vite
+never silently lands on someone else's port). Beat 2 is now **hold** the orange button.
 
 Before the panel: `powershell -ExecutionPolicy Bypass -File scripts/demo.ps1` (installs, runs
 the tests — stop if red — builds, opens both servers). Open http://localhost:5173, click

@@ -61,12 +61,14 @@ digital-twin/                     (repo: UDITGABAA/digital-twin-udit-gaba-, bran
 │
 └── dashboard/                    ══ C ══ Vite + React + TS + Tailwind; /api proxied to :8000
     └── src/
-        ├── index.css             design tokens (ink / ember / verdigris / gold / signal), panel + node states
+        ├── index.css             design tokens (bone / ink / one orange accent / muted pastels), card, chip, tag, node states
         ├── types.ts              hand-written mirror of the Pydantic models
+        ├── lib/cn.ts             clsx + tailwind-merge
         ├── api/client.ts
-        ├── App.tsx               state, control rail, scenario/adversary switch, status bar
-        └── views/                DecisionCard (hero) · Replay (attack replay, the authored moment) · Stage (zone-lane graph
-                                  with breach states) · EffortChart · OptimizerPanel
+        ├── components/           SegmentedTabs (KokonutUI SmoothTab port) · HoldButton (KokonutUI port, CSS fill) · Stat (NumberFlow)
+        ├── App.tsx               state, top nav, control chips (proposal composer), stat strip, footer
+        └── views/                DecisionCard (hero, serif headline) · Replay (attack replay, the authored moment) ·
+                                  Stage (zone-lane graph with breach states) · EffortChart · OptimizerPanel
 ```
 
 Only **three** files are ever touched by more than one person: `CLAUDE.md`,

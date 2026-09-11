@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCcw, ShieldHalf, CircleAlert } from "lucide-react";
+import { ArrowsClockwise, Warning, ShieldCheck } from "@phosphor-icons/react";
 import { api } from "./api/client";
 import type { Agent, Blast, ChangeVerdict, Control, Graph, Result, Route, Trial } from "./types";
 import { DecisionCard } from "./views/DecisionCard";
@@ -7,6 +7,8 @@ import { Stage, type ReplayState } from "./views/Stage";
 import { Replay } from "./views/Replay";
 import { EffortChart } from "./views/EffortChart";
 import { OptimizerPanel } from "./views/OptimizerPanel";
+import { SegmentedTabs } from "./components/SegmentedTabs";
+import { Stat } from "./components/Stat";
 
 type Paths = { naive_count: number; count: number; routes: Route[] };
 
@@ -59,6 +61,8 @@ export default function App() {
     await refresh("current", agentId);
   };
 
+  const switchAgent = (id: string) => { setAgentId(id); refresh(twinId, id); };
+
   const runAttack = async () => {
     setRunning(true);
     try { setRoute(null); setBlast(null); setTrials(await api.trace(twinId, agentId, picked, 12)); }
@@ -69,105 +73,94 @@ export default function App() {
 
   const pDelta = prev && baseline ? baseline.p_success - prev.p : null;
   const internetReached = blast?.reachable.some((a) => graph?.assets.find((x) => x.id === a)?.kind === "internet");
+  const proposalLabel = picked.length ? picked.map((id) => catalogue.find((c) => c.id === id)?.name ?? id).join(" + ") : "the current twin";
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-ink-700 bg-ink-950/85 backdrop-blur">
-        <div className="mx-auto flex max-w-[1560px] flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
+    <div className="min-h-dvh">
+      <header className="sticky top-0 z-20 border-b border-line bg-canvas/85 backdrop-blur-sm">
+        <nav className="mx-auto flex max-w-[1480px] flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
           <div className="flex items-center gap-2.5">
-            <ShieldHalf className="h-5 w-5 text-signal" />
-            <div>
-              <div className="text-[15px] font-semibold leading-none">Security Change Sandbox</div>
-              <div className="mt-1 text-[11px] text-fg-faint">what can I deploy safely, within budget, and how sure are we</div>
-            </div>
+            <span className="grid h-7 w-7 place-items-center rounded-md bg-accent text-white"><ShieldCheck weight="bold" className="h-4 w-4" /></span>
+            <span className="text-[15px] font-semibold text-ink">Security Change Sandbox</span>
+            <span className="hidden text-[13px] text-faint md:inline">· what can I deploy safely, within budget, and how sure are we</span>
           </div>
-          <div className="ml-auto flex items-center gap-2 text-sm">
-            <label className="text-fg-faint">scenario</label>
-            <select value={scenario} onChange={(e) => loadScenario(e.target.value)} className="rounded-md border border-ink-600 bg-ink-800 px-2 py-1.5">
+          <div className="ml-auto flex flex-wrap items-center gap-3">
+            <SegmentedTabs value={agentId} onChange={switchAgent} items={agents.map((a) => ({ id: a.id, title: a.name, hint: `starts in ${a.start_zones.join(", ")}` }))} />
+            <select value={scenario} onChange={(e) => loadScenario(e.target.value)} aria-label="scenario"
+              className="rounded-md border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink">
               <option value="golden">FinBank</option>
               <option value="golden_sync">FinBank after sync — contractor admin on jump-01</option>
             </select>
-            <label className="ml-2 text-fg-faint">adversary</label>
-            <select value={agentId} onChange={(e) => { setAgentId(e.target.value); refresh(twinId, e.target.value); }} className="rounded-md border border-ink-600 bg-ink-800 px-2 py-1.5">
-              {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-            <button onClick={() => loadScenario("golden", true)} className="btn ml-2"><RefreshCcw className="h-3.5 w-3.5" />reset demo</button>
+            <button onClick={() => loadScenario("golden", true)} className="btn"><ArrowsClockwise weight="bold" />reset demo</button>
           </div>
-        </div>
+        </nav>
       </header>
 
-      <main className="mx-auto max-w-[1560px] px-5 py-5">
-        {error && <div className="mb-4 flex items-center gap-2 rounded-lg border border-block/50 bg-block/10 px-3 py-2 text-sm"><CircleAlert className="h-4 w-4 text-block" />{error} — is uvicorn running on :8000?</div>}
+      <main id="main" className="mx-auto max-w-[1480px] px-6 pb-16 pt-6">
+        {error && <div className="mb-5 flex items-center gap-2 rounded-lg border border-red-ink/30 bg-red-tint px-3 py-2 text-sm text-red-ink"><Warning weight="bold" />{error} — is uvicorn running?</div>}
 
         {baseline && (
-          <div className="mb-4 flex flex-wrap gap-x-8 gap-y-2 text-sm">
-            <Stat label="critical paths to crown jewel" value={paths?.naive_count ?? "…"} />
-            <Stat label="p(success)" value={baseline.p_success.toFixed(2)} sub={`${baseline.p_success_ci[0].toFixed(2)}–${baseline.p_success_ci[1].toFixed(2)}`}
-              delta={pDelta !== null && pDelta !== 0 ? `${pDelta > 0 ? "+" : ""}${pDelta.toFixed(2)} since last twin` : undefined} bad={(pDelta ?? 0) > 0} />
-            <Stat label="mean attacker effort" value={baseline.mean_effort?.toFixed(1) ?? "—"} />
-            <Stat label="weighted risk" value={baseline.weighted_risk.toFixed(2)} />
-            <Stat label="favourite route" value={baseline.routes[0] ? baseline.routes[0].route.map((e) => e.technique).join(" › ") : "none"} sub={baseline.routes[0] ? `p_select ${baseline.routes[0].p_select.toFixed(2)}` : undefined} mono />
-            <span className="ml-auto self-end text-[11px] text-fg-faint">twin {twinId.slice(0, 10)} · seed 1 · 1,000 trials</span>
+          <div className="mb-6 flex flex-wrap items-end gap-x-10 gap-y-3">
+            <Stat label="critical paths to crown jewel" value={paths?.naive_count} />
+            <Stat label="p(success)" value={baseline.p_success} format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
+              sub={`${baseline.p_success_ci[0].toFixed(2)}–${baseline.p_success_ci[1].toFixed(2)}`}
+              delta={pDelta !== null && pDelta !== 0 ? `${pDelta > 0 ? "+" : ""}${pDelta.toFixed(2)} since last twin` : undefined} deltaBad={(pDelta ?? 0) > 0} />
+            <Stat label="mean attacker effort" value={baseline.mean_effort ?? 0} format={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }} />
+            <Stat label="weighted risk" value={baseline.weighted_risk} format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }} />
+            <Stat label="favourite route" sub={baseline.routes[0] ? `p_select ${baseline.routes[0].p_select.toFixed(2)}` : undefined}>
+              <span className="mono text-[12px] font-normal text-text">{baseline.routes[0] ? baseline.routes[0].route.map((e) => e.technique).join(" › ") : "none"}</span>
+            </Stat>
+            <span className="mono ml-auto text-[11px] text-faint">twin {twinId.slice(0, 10)} · seed 1 · 1,000 trials</span>
           </div>
         )}
 
-        <div className="grid grid-cols-[264px_1fr] gap-4">
-          <aside className="panel self-start p-3">
-            <div className="label mb-2 px-1">Propose controls</div>
-            <div className="space-y-0.5">
-              {catalogue.map((c) => {
-                const on = picked.includes(c.id);
-                return (
-                  <label key={c.id} className={`flex cursor-pointer items-start gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors ${on ? "bg-ink-800 ring-1 ring-signal/50" : "hover:bg-ink-850"}`}>
-                    <input type="checkbox" checked={on} onChange={() => toggle(c.id)} className="mt-1 accent-signal" />
-                    <span className="min-w-0">
-                      <span className="block font-medium leading-snug">{c.name}</span>
-                      <span className="block text-[11px] text-fg-faint">{c.id} · cost {c.cost}</span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-            {picked.length > 0 && <button onClick={() => setPicked([])} className="mt-2 px-2 text-xs text-fg-muted hover:text-fg">clear selection</button>}
-          </aside>
+        <section className="mb-5">
+          <div className="mb-2 flex items-baseline gap-3">
+            <div className="label">Propose controls</div>
+            {picked.length > 0 && <button onClick={() => setPicked([])} className="text-xs text-muted hover:text-ink">clear</button>}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {catalogue.map((c) => (
+              <button key={c.id} type="button" className="chip" aria-pressed={picked.includes(c.id)} onClick={() => toggle(c.id)}>
+                <span>{c.name}</span><span className="cost">cost {c.cost}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
-          <section className="flex min-w-0 flex-col gap-4">
-            <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] gap-4">
-              <DecisionCard verdict={verdict} catalogue={catalogue} onPick={setPicked} onHighlight={(r) => { setRoute(r); setTrials(null); setReplay(null); }} />
-              <Replay trials={trials} noiseBudget={agent?.noise_budget ?? 3} running={running} onRun={runAttack} onState={setReplay}
-                label={picked.length ? `${agent?.name ?? agentId} vs ${picked.map((id) => catalogue.find((c) => c.id === id)?.name ?? id).join(" + ")}` : `${agent?.name ?? agentId} against the current twin`} />
-            </div>
-
-            <Stage graph={graph} route={route} blast={blast} replay={replay} startZones={agent?.start_zones ?? []} onSelectAsset={selectAsset} />
-
-            {blast && (
-              <div className="panel px-4 py-3 text-sm">
-                <span className="label mr-2">Blast radius</span>
-                <b>{blast.asset_id}</b> falls → with its sessions and credentials an attacker reaches{" "}
-                <span className="text-gold">{blast.reachable.filter((a) => graph?.assets.find((x) => x.id === a)?.kind !== "internet").join(", ") || "nothing"}</span>
-                {blast.crown_jewels_hit.length > 0 && <span className="text-block"> — including crown jewel {blast.crown_jewels_hit.join(", ")}</span>}
-                {internetReached && <span className="text-fg-muted"> (and can exfiltrate to the internet)</span>}.
-                <span className="text-fg-faint"> Topological upper bound ignoring credentials: {blast.upper_bound.length} assets.</span>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              <EffortChart before={verdict?.before ?? null} after={verdict?.after ?? null} />
-              <OptimizerPanel catalogue={catalogue} run={(b) => api.optimize(twinId, b, agents.map((a) => a.id))} onPick={setPicked} />
-            </div>
-          </section>
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+          <DecisionCard verdict={verdict} catalogue={catalogue} onPick={setPicked} onHighlight={(r) => { setRoute(r); setTrials(null); setReplay(null); }} />
+          <Replay trials={trials} noiseBudget={agent?.noise_budget ?? 3} running={running} onRun={runAttack} onState={setReplay}
+            label={`${agent?.name ?? agentId} against ${proposalLabel}`} />
         </div>
-      </main>
-    </div>
-  );
-}
 
-function Stat({ label, value, sub, delta, bad, mono }: { label: string; value: string | number; sub?: string; delta?: string; bad?: boolean; mono?: boolean }) {
-  return (
-    <div>
-      <div className="label">{label}</div>
-      <div className={`mt-0.5 ${mono ? "mono text-[12px]" : "text-base font-semibold"}`}>{value}{sub && <span className="ml-1.5 text-xs font-normal text-fg-faint">{sub}</span>}
-        {delta && <span className={`ml-1.5 text-xs font-semibold ${bad ? "text-block" : "text-deploy"}`}>{delta}</span>}</div>
+        <div className="mt-5">
+          <Stage graph={graph} route={route} blast={blast} replay={replay} startZones={agent?.start_zones ?? []} onSelectAsset={selectAsset} />
+        </div>
+
+        {blast && (
+          <div className="card mt-5 px-5 py-3 text-sm text-text">
+            <span className="label mr-3">Blast radius</span>
+            <b className="text-ink">{blast.asset_id}</b> falls → with its sessions and credentials an attacker reaches{" "}
+            <span className="text-yellow-ink">{blast.reachable.filter((a) => graph?.assets.find((x) => x.id === a)?.kind !== "internet").join(", ") || "nothing"}</span>
+            {blast.crown_jewels_hit.length > 0 && <span className="text-red-ink"> — including crown jewel {blast.crown_jewels_hit.join(", ")}</span>}
+            {internetReached && <span className="text-muted"> (and can exfiltrate to the internet)</span>}.
+            <span className="text-faint"> Topological upper bound ignoring credentials: {blast.upper_bound.length} assets.</span>
+          </div>
+        )}
+
+        <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+          <EffortChart before={verdict?.before ?? null} after={verdict?.after ?? null} />
+          <OptimizerPanel catalogue={catalogue} run={(b) => api.optimize(twinId, b, agents.map((a) => a.id))} onPick={setPicked} />
+        </div>
+
+        <footer className="mt-12 flex flex-wrap gap-x-6 gap-y-1 border-t border-line pt-4 text-[12px] text-faint">
+          <span>Seeded Monte Carlo over a frozen twin — rehearsed numbers equal stage numbers.</span>
+          <span>Ten MITRE ATT&CK techniques in YAML.</span>
+          <span>Every grant, flow and edge carries its evidence.</span>
+          <span className="ml-auto">MUJ HackX 4.0 · PS #13</span>
+        </footer>
+      </main>
     </div>
   );
 }

@@ -399,10 +399,15 @@ non-interactive service identities."* Never "service accounts cannot MFA".
   tuples before any simulation loop.
 - **No database.** JSON files + in-memory dict keyed by twin hash.
 - Frontend: React 19, TypeScript, Vite, Tailwind v4, React Flow (graph), Recharts (the
-  overlaid attacker-effort histograms — the thesis made visible), `motion` for the replay
-  feed, lucide icons. Design: Operate mode (impeccable), Dark Security register (taste-skill) —
-  navy-black lacquer, ember = attacker, verdigris = legitimate business, gold = crown jewel,
-  signal blue = selection; one typeface (Inter); no emoji as icons.
+  overlaid attacker-effort histograms — the thesis made visible), `motion`, Phosphor icons
+  (bold), `@number-flow/react`. **Design system** (taste-skill minimalist + redesign rules,
+  impeccable Operate mode, KokonutUI components): warm bone canvas, white surfaces, off-black
+  ink, 1px `#EAEAEA` lines, **one accent — burnt orange `#E4622A`** meaning the attacker /
+  the primary action / the current selection; verdicts and flows in the skill's muted pastels
+  only. Geist for UI, Instrument Serif for the decision headline, Geist Mono for data. No
+  Inter, no Lucide, no heavy shadows, no pill containers, no left sidebar, no emoji. Ported
+  components: KokonutUI `SmoothTab` (adversary switch) and `HoldButton` (hold to run the
+  attack). Motion only where it conveys state (Emil Kowalski's gate).
 - **Run on localhost. Do not deploy.** Two terminals, `uvicorn` + `vite` (`scripts/demo.ps1`
   starts both). If Vite dies, `uvicorn` alone serves the built dashboard at `:8000`. Second
   laptop as hot backup.

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { Play, Pause, SkipForward, RotateCcw, ShieldAlert, Check, X, Radar } from "lucide-react";
+import { Play, Pause, SkipForward, ArrowCounterClockwise, Check, X, WarningOctagon, Crosshair } from "@phosphor-icons/react";
 import type { Step, Trial } from "../types";
 import type { ReplayState } from "./Stage";
 import { edgeKey } from "./Stage";
+import { HoldButton } from "../components/HoldButton";
 
 const SPEEDS = [1, 2, 4] as const;
 
@@ -11,8 +11,8 @@ export function Replay({ trials, noiseBudget, label, onState, onRun, running }: 
   trials: Trial[] | null; noiseBudget: number; label: string;
   onState: (s: ReplayState | null) => void; onRun: () => void; running: boolean;
 }) {
-  const [ti, setTi] = useState(0);         // trial index
-  const [si, setSi] = useState(-1);        // step index shown (-1 = none yet)
+  const [ti, setTi] = useState(0);
+  const [si, setSi] = useState(-1);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<(typeof SPEEDS)[number]>(1);
   const feedRef = useRef<HTMLDivElement>(null);
@@ -37,11 +37,9 @@ export function Replay({ trials, noiseBudget, label, onState, onRun, running }: 
 
   useEffect(() => {
     if (!trial) { onState(null); return; }
-    const breached = new Set<string>();
-    const traversed = new Set<string>();
+    const breached = new Set<string>(), traversed = new Set<string>();
     shown.forEach((s) => { if (s.succeeded) { breached.add(s.dst); traversed.add(edgeKey(s.src, s.dst, s.technique)); } });
     if (shown[0]) breached.add(shown[0].src);
-    const attempting = last && !last.succeeded && !last.detected && !done ? last : null;
     onState({
       breached, traversed,
       active: last && !done ? last.dst : null,
@@ -49,7 +47,6 @@ export function Replay({ trials, noiseBudget, label, onState, onRun, running }: 
       failedEdge: last && !last.succeeded ? edgeKey(last.src, last.dst, last.technique) : null,
       detected: !!last?.detected,
     });
-    void attempting;
   }, [si, ti, trial]); // eslint-disable-line
 
   useEffect(() => { feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: "smooth" }); }, [si]);
@@ -59,68 +56,67 @@ export function Replay({ trials, noiseBudget, label, onState, onRun, running }: 
   const successes = trials ? trials.filter((t) => t.success).length : 0;
 
   return (
-    <div className="panel flex min-h-[440px] flex-col p-4">
-      <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-        <div className="min-w-0 flex-1">
+    <section className="card flex min-h-[460px] flex-col p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
           <div className="label">Attack replay</div>
-          <div className="truncate text-sm font-semibold" title={label}>{label}</div>
+          <div className="mt-1 truncate text-[15px] font-medium text-ink" title={label}>{label}</div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          {trials ? (
+          {trials && (
             <>
-              <button className="btn" onClick={() => setPlaying((p) => !p)} aria-label={playing ? "pause" : "play"}>{playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}</button>
-              <button className="btn" onClick={() => { setPlaying(false); if (done) { if (ti < trials.length - 1) { setTi(ti + 1); setSi(-1); } } else setSi(steps.length - 1); }} aria-label="skip"><SkipForward className="h-3.5 w-3.5" /></button>
-              <button className="btn" onClick={() => { setTi(0); setSi(-1); setPlaying(true); }} aria-label="restart"><RotateCcw className="h-3.5 w-3.5" /></button>
-              <button className="btn" onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>{speed}×</button>
+              <button className="btn btn-icon" onClick={() => setPlaying((p) => !p)} aria-label={playing ? "pause" : "play"}>{playing ? <Pause weight="bold" /> : <Play weight="bold" />}</button>
+              <button className="btn btn-icon" aria-label="skip" onClick={() => { setPlaying(false); if (done) { if (ti < trials.length - 1) { setTi(ti + 1); setSi(-1); } } else setSi(steps.length - 1); }}><SkipForward weight="bold" /></button>
+              <button className="btn btn-icon" aria-label="restart" onClick={() => { setTi(0); setSi(-1); setPlaying(true); }}><ArrowCounterClockwise weight="bold" /></button>
+              <button className="btn mono" onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>{speed}×</button>
             </>
-          ) : null}
-          <button className="btn btn-ember ml-1" onClick={onRun} disabled={running}><Radar className="h-3.5 w-3.5" />{running ? "simulating…" : trials ? "Run again" : "Run attack"}</button>
+          )}
+          <HoldButton onComplete={onRun} disabled={running} className="ml-1"><Crosshair weight="bold" />{running ? "simulating…" : trials ? "hold to run again" : "hold to run attack"}</HoldButton>
         </div>
       </div>
 
       {!trials ? (
-        <div className="mt-6 flex flex-1 flex-col items-center justify-center text-center text-sm text-fg-muted">
-          <Radar className="mb-3 h-8 w-8 text-fg-faint" />
-          Replays the first trials of the seeded simulation, step by step — the same dice the 1,000-trial statistics are built from.
+        <div className="mt-8 flex flex-1 flex-col justify-center">
+          <p className="max-w-[40ch] text-[15px] leading-relaxed text-muted">
+            Replays the first trials of the seeded simulation, step by step — the same dice the thousand-trial statistics are built from.
+            Trial <i>i</i> here is trial <i>i</i> of the statistics.
+          </p>
+          <p className="mt-3 text-sm text-faint">Hold the orange button. Change the proposal and run again to watch the attacker fail where the control bites.</p>
         </div>
       ) : (
         <>
-          <div className="mt-4 grid grid-cols-4 gap-3 text-sm">
-            <div className="panel-raised px-3 py-2"><div className="label">trial</div><div className="font-semibold">{ti + 1} / {trials.length}</div></div>
-            <div className="panel-raised px-3 py-2"><div className="label">route</div><div className="font-semibold">#{(trial?.route_index ?? 0) + 1} · {steps.length ? new Set(steps.map((s) => s.dst)).size : 0} hops</div></div>
-            <div className="panel-raised px-3 py-2"><div className="label">effort</div><div className="font-semibold">{(last?.effort_so_far ?? 0).toFixed(0)}</div></div>
-            <div className="panel-raised px-3 py-2">
-              <div className="label">noise / detection budget</div>
-              <div className="mt-1 meter"><div style={{ width: `${Math.min(100, (noise / noiseBudget) * 100)}%` }} /></div>
-              <div className="mt-1 text-[11px] text-fg-muted">{noise.toFixed(1)} / {noiseBudget.toFixed(1)}</div>
+          <div className="mt-5 grid grid-cols-4 gap-2">
+            <div className="inset px-3 py-2"><div className="label">trial</div><div className="mt-0.5 font-semibold text-ink">{ti + 1} <span className="text-faint">/ {trials.length}</span></div></div>
+            <div className="inset px-3 py-2"><div className="label">route</div><div className="mt-0.5 font-semibold text-ink">#{(trial?.route_index ?? 0) + 1} <span className="text-faint">· {steps.length ? new Set(steps.map((s) => s.dst)).size : 0} hops</span></div></div>
+            <div className="inset px-3 py-2"><div className="label">effort</div><div className="mt-0.5 font-semibold text-ink">{(last?.effort_so_far ?? 0).toFixed(0)}</div></div>
+            <div className="inset px-3 py-2">
+              <div className="label">noise · budget</div>
+              <div className="mt-1.5 meter"><div style={{ width: `${Math.min(100, (noise / noiseBudget) * 100)}%` }} /></div>
+              <div className="mono mt-1 text-[11px] text-muted">{noise.toFixed(1)} / {noiseBudget.toFixed(1)}</div>
             </div>
           </div>
 
-          <div ref={feedRef} className="mt-3 h-[232px] space-y-1 overflow-y-auto pr-1">
-            <AnimatePresence initial={false}>
-              {shown.map((s, i) => (
-                <motion.div key={`${ti}-${i}`} initial={{ opacity: 0, y: 6, filter: "blur(2px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                  className={`feed-line ${s.detected ? "detected" : s.succeeded ? "ok" : "fail"}`}>
-                  <span className="text-fg-faint">{s.detected ? <ShieldAlert className="h-4 w-4 text-block" /> : s.succeeded ? <Check className="h-4 w-4 text-verdigris" /> : <X className="h-4 w-4 text-review" />}</span>
-                  <span>
-                    <span className="font-medium">{s.technique}</span>
-                    <span className="text-fg-muted"> {s.src === s.dst ? `on ${s.dst}` : `${s.src} → ${s.dst}`}{s.identity_id ? ` as ${s.identity_id}` : ""}</span>
-                    {s.detected ? <span className="text-block"> — noise over budget, attacker detected</span> : null}
-                  </span>
-                  <span className="mono text-fg-faint">{s.roll === null ? "—" : `roll ${s.roll.toFixed(2)} ${s.succeeded ? "<" : "≥"} p ${s.p_success.toFixed(2)}`}{s.attempt > 1 ? ` · try ${s.attempt}` : ""}</span>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+          <div ref={feedRef} className="mt-3 h-[224px] space-y-1 overflow-y-auto pr-1">
+            {shown.map((s, i) => (
+              <div key={`${ti}-${i}`} className={`feed-line ${s.detected ? "detected" : s.succeeded ? "ok" : "fail"}`}>
+                <span>{s.detected ? <WarningOctagon className="text-red-ink" weight="fill" /> : s.succeeded ? <Check className="text-green-ink" weight="bold" /> : <X className="text-yellow-ink" weight="bold" />}</span>
+                <span className="text-ink">
+                  <span className="font-medium">{s.technique}</span>
+                  <span className="text-muted"> {s.src === s.dst ? `on ${s.dst}` : `${s.src} → ${s.dst}`}{s.identity_id ? ` as ${s.identity_id}` : ""}</span>
+                  {s.detected && <span className="text-red-ink"> — noise over budget, attacker detected</span>}
+                </span>
+                <span className="mono text-muted">{s.roll === null ? "—" : `roll ${s.roll.toFixed(2)} ${s.succeeded ? "<" : "≥"} p ${s.p_success.toFixed(2)}`}{s.attempt > 1 ? ` · try ${s.attempt}` : ""}</span>
+              </div>
+            ))}
             {outcome && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className={`mt-2 rounded-lg px-3 py-2 text-sm font-semibold ${outcome === "success" ? "bg-block/20 text-ember-soft" : outcome === "detected" ? "bg-review/15 text-review" : "bg-ink-800 text-fg-muted"}`}>
+              <div className={`feed-line mt-2 font-medium ${outcome === "success" ? "bg-accent-tint text-accent-deep" : outcome === "detected" ? "detected text-red-ink" : "bg-raised text-muted"}`} style={{ gridTemplateColumns: "1fr" }}>
                 {outcome === "success" ? `Crown jewel reached — effort ${trial!.effort.toFixed(0)}, noise ${trial!.noise.toFixed(1)}` : outcome === "detected" ? "Attacker detected before reaching the target" : "Attacker gave up after three failed attempts"}
-              </motion.div>
+              </div>
             )}
           </div>
-          <div className="mt-2 text-[11px] text-fg-faint">{successes} of {trials.length} replayed trials reach the crown jewel · seed 1 · trial i here is trial i of the statistics</div>
+          <div className="mt-3 text-[12px] text-faint"><b className="text-ink">{successes}</b> of {trials.length} replayed trials reach the crown jewel · seed 1</div>
         </>
       )}
-    </div>
+    </section>
   );
 }

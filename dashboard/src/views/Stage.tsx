@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ReactFlow, Background, Handle, Position, MarkerType, type Edge as FEdge, type Node as FNode, type NodeProps } from "@xyflow/react";
-import { Crown, Database, Globe, Server, HardDrive, Monitor, Cpu } from "lucide-react";
+import { Crown, Database, Globe, HardDrives, Desktop, Cpu, CloudArrowUp } from "@phosphor-icons/react";
 import type { Asset, Blast, Graph, Route } from "../types";
 
 const ZONES = ["external", "dmz", "corp", "mgmt", "prod"];
-const NODE_W = 176;
+const NODE_W = 204;
 const STAGE_H = 600;
 
 export interface ReplayState {
@@ -19,14 +19,14 @@ export interface ReplayState {
 const edgeKey = (src: string, dst: string, technique: string) => `${src}|${dst}|${technique}`;
 
 function Icon({ kind }: { kind: string }) {
-  const cls = "h-3.5 w-3.5 shrink-0";
+  const p = { className: "h-3.5 w-3.5 shrink-0 text-muted", weight: "bold" as const };
   switch (kind) {
-    case "database": return <Database className={cls} />;
-    case "internet": return <Globe className={cls} />;
-    case "workstation": return <Monitor className={cls} />;
-    case "share": return <HardDrive className={cls} />;
-    case "cloud_role": return <Cpu className={cls} />;
-    default: return <Server className={cls} />;
+    case "database": return <Database {...p} />;
+    case "internet": return <Globe {...p} />;
+    case "workstation": return <Desktop {...p} />;
+    case "share": return <HardDrives {...p} />;
+    case "cloud_role": return <CloudArrowUp {...p} />;
+    default: return <Cpu {...p} />;
   }
 }
 
@@ -39,7 +39,7 @@ function AssetNode({ data }: NodeProps) {
       <div className="name">
         <Icon kind={a.kind} />
         <span className="truncate">{a.name}</span>
-        {a.crown_jewel && <Crown className="ml-auto h-3.5 w-3.5 shrink-0 text-gold" />}
+        {a.crown_jewel && <Crown className="ml-auto h-3.5 w-3.5 shrink-0 text-accent" weight="fill" />}
       </div>
       <div className="meta">{a.id} · C{a.criticality}</div>
       <Handle type="source" position={Position.Right} style={{ opacity: 0 }} />
@@ -97,26 +97,26 @@ export function Stage({ graph, route, blast, replay, startZones, onSelectAsset }
       const hot = onRoute.has(k) || replay?.traversed.has(k);
       const attempting = replay?.activeEdge === k;
       const failed = replay?.failedEdge === k;
-      const color = failed ? "var(--color-review)" : hot || attempting ? "var(--color-ember)" : e.p_success < 0.5 ? "var(--color-ink-600)" : "color-mix(in oklab, var(--color-ember) 45%, var(--color-ink-600))";
+      const color = failed ? "var(--color-yellow-ink)" : hot || attempting ? "var(--color-accent)" : e.p_success < 0.5 ? "var(--color-line-strong)" : "var(--color-accent-soft)";
       edges.push({
         id: "a:" + k, source: e.src, target: e.dst, animated: !!(hot || attempting),
         label: `${e.technique} · ${e.attck}${e.p_success < 0.5 ? ` · p ${e.p_success.toFixed(2)}` : ""}`,
-        labelStyle: { fill: hot || attempting ? "var(--color-ember-soft)" : "var(--color-fg-faint)", fontSize: 9.5, fontWeight: 500 },
-        labelBgStyle: { fill: "var(--color-ink-950)", fillOpacity: 0.9 }, labelBgPadding: [4, 2], labelBgBorderRadius: 4,
-        style: { stroke: color, strokeWidth: hot || attempting ? 2.5 : 1.2, opacity: focus && !hot && !attempting && !failed ? 0.25 : 1 },
+        labelStyle: { fill: hot || attempting ? "var(--color-accent-deep)" : "var(--color-faint)", fontSize: 9.5, fontWeight: 500, fontFamily: "var(--font-mono)" },
+        labelBgStyle: { fill: "var(--color-surface)", fillOpacity: 0.95 }, labelBgPadding: [4, 2], labelBgBorderRadius: 4,
+        style: { stroke: color, strokeWidth: hot || attempting ? 2.5 : 1.3, opacity: focus && !hot && !attempting && !failed ? 0.28 : 1 },
         markerEnd: { type: MarkerType.ArrowClosed, color, width: 14, height: 14 },
       });
     });
     graph.flows.forEach((f) => edges.push({
       id: "f:" + f.id, source: f.src, target: f.dst, label: `${f.id} · ${f.protocol}/${f.port}`,
-      labelStyle: { fill: "var(--color-verdigris)", fontSize: 9.5 }, labelBgStyle: { fill: "var(--color-ink-950)", fillOpacity: 0.9 },
-      style: { stroke: "var(--color-verdigris)", strokeWidth: 1.4, strokeDasharray: "5 4", opacity: focus ? 0.28 : 0.85 },
+      labelStyle: { fill: "var(--color-blue-ink)", fontSize: 9.5, fontFamily: "var(--font-mono)" }, labelBgStyle: { fill: "var(--color-surface)", fillOpacity: 0.95 },
+      style: { stroke: "var(--color-blue-ink)", strokeWidth: 1.3, strokeDasharray: "5 4", opacity: focus ? 0.25 : 0.7 },
     }));
     return { nodes, edges };
   }, [graph, route, blast, replay, startZones, width]);
 
   return (
-    <div ref={box} className="panel relative overflow-hidden" style={{ height: STAGE_H }}>
+    <section ref={box} className="card relative overflow-hidden" style={{ height: STAGE_H }}>
       <div className="pointer-events-none absolute inset-0 z-10">
         {ZONES.map((z, i) => (
           <div key={z} className="lane" style={{ left: `${(i / ZONES.length) * 100}%`, width: `${100 / ZONES.length}%` }}>
@@ -125,17 +125,17 @@ export function Stage({ graph, route, blast, replay, startZones, onSelectAsset }
         ))}
       </div>
       <ReactFlow key={width} nodes={nodes} edges={edges} nodeTypes={nodeTypes} defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-        onNodeClick={(_, n) => onSelectAsset(n.id)} nodesDraggable={false} colorMode="dark" minZoom={1} maxZoom={1}
+        onNodeClick={(_, n) => onSelectAsset(n.id)} nodesDraggable={false} colorMode="light" minZoom={1} maxZoom={1}
         zoomOnScroll={false} zoomOnPinch={false} zoomOnDoubleClick={false} panOnDrag={false} panOnScroll={false} preventScrolling={false} proOptions={{ hideAttribution: true }}>
-        <Background color="var(--color-ink-700)" gap={24} size={1} />
+        <Background color="var(--color-line)" gap={24} size={1.2} />
       </ReactFlow>
-      <div className="pointer-events-none absolute bottom-2 left-3 z-10 flex gap-4 text-[11px] text-fg-faint">
-        <span><i className="mr-1 inline-block h-2 w-4 rounded-sm" style={{ background: "var(--color-ember)" }} />attack edge · technique · ATT&CK id</span>
-        <span><i className="mr-1 inline-block h-2 w-4 rounded-sm" style={{ background: "var(--color-verdigris)" }} />legitimate flow</span>
-        <span><i className="mr-1 inline-block h-2 w-4 rounded-sm" style={{ background: "var(--color-gold)" }} />crown jewel / blast radius</span>
+      <div className="pointer-events-none absolute bottom-3 left-4 z-10 flex gap-5 text-[11px] text-faint">
+        <span><i className="mr-1.5 inline-block h-[3px] w-4 rounded-sm align-middle" style={{ background: "var(--color-accent)" }} />attack edge · technique · ATT&CK id</span>
+        <span><i className="mr-1.5 inline-block h-[3px] w-4 rounded-sm align-middle" style={{ background: "var(--color-blue-ink)" }} />legitimate flow</span>
+        <span><i className="mr-1.5 inline-block h-[3px] w-4 rounded-sm align-middle" style={{ background: "var(--color-yellow-ink)" }} />blast radius</span>
         <span>click an asset for its blast radius</span>
       </div>
-    </div>
+    </section>
   );
 }
 

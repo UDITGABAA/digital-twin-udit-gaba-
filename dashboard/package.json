@@ -1,12 +1,15 @@
 {
   "dependencies": {
+    "@number-flow/react": "^0.6.2",
+    "@phosphor-icons/react": "^2.1.10",
     "@tailwindcss/vite": "^4.3.3",
     "@xyflow/react": "^12.11.6",
-    "lucide-react": "^1.45.0",
+    "clsx": "^2.1.1",
     "motion": "^13.2.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "recharts": "^3.10.1",
+    "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {

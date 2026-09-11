@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Scale } from "lucide-react";
+import { Scales } from "@phosphor-icons/react";
 import type { Control, Portfolio } from "../types";
 
 export function OptimizerPanel({ catalogue, run, onPick }: {
@@ -11,36 +11,36 @@ export function OptimizerPanel({ catalogue, run, onPick }: {
   const name = (id: string) => catalogue.find((c) => c.id === id)?.name ?? id;
 
   const Col = ({ title, ids, cost, reduction, broken, good }: { title: string; ids: string[]; cost: number; reduction: number; broken: string[]; good: boolean }) => (
-    <div className={`panel-raised flex-1 p-3 ${good ? "border-deploy/50" : ""}`}>
+    <div className={`flex-1 rounded-lg border p-4 ${good ? "border-green-ink/40 bg-green-tint/40" : "border-line"}`}>
       <div className="label">{title}</div>
-      <ul className="mt-1.5 space-y-0.5 text-sm">{ids.map((id) => <li key={id}>{name(id)}</li>)}{!ids.length && <li className="text-fg-faint">nothing within budget</li>}</ul>
-      <div className="mt-2 text-xs text-fg-muted">risk −{reduction.toFixed(2)} of {p?.baseline_risk.toFixed(2)} · cost {cost}</div>
-      <div className={`text-xs ${broken.some((b) => b === "F1" || b === "F2") ? "font-semibold text-block" : broken.length ? "text-review" : "text-deploy"}`}>
+      <ul className="mt-2 space-y-1 text-sm text-ink">{ids.map((id) => <li key={id}>{name(id)}</li>)}{!ids.length && <li className="text-faint">nothing within budget</li>}</ul>
+      <div className="mt-3 text-xs text-muted">risk −{reduction.toFixed(2)} of {p?.baseline_risk.toFixed(2)} · cost {cost}</div>
+      <div className={`mt-1 text-xs ${broken.some((b) => b === "F1" || b === "F2") ? "font-medium text-red-ink" : broken.length ? "text-yellow-ink" : "text-green-ink"}`}>
         {broken.length ? `breaks ${broken.join(", ")}` : "breaks nothing"}
       </div>
-      <button className="mt-2 text-xs text-signal hover:underline" onClick={() => onPick(ids)}>evaluate this portfolio →</button>
+      <button className="mt-3 text-xs font-medium text-accent-deep hover:underline" onClick={() => onPick(ids)}>evaluate this portfolio →</button>
     </div>
   );
 
   return (
-    <div className="panel p-4">
+    <section className="card p-6">
       <div className="flex flex-wrap items-center gap-3">
         <div className="label">Portfolio within budget</div>
-        <input type="range" min={1} max={20} value={budget} onChange={(e) => setBudget(+e.target.value)} className="w-36 accent-signal" aria-label="budget" />
-        <span className="text-sm">budget <b>{budget}</b></span>
-        <button className="btn btn-primary" disabled={busy} onClick={async () => { setBusy(true); try { setP(await run(budget)); } finally { setBusy(false); } }}>
-          <Scale className="h-3.5 w-3.5" />{busy ? "scoring…" : "optimise"}
+        <input type="range" min={1} max={20} value={budget} onChange={(e) => setBudget(+e.target.value)} className="w-32 accent-accent" aria-label="budget" />
+        <span className="text-sm text-ink">budget <b>{budget}</b></span>
+        <button className="btn btn-ink" disabled={busy} onClick={async () => { setBusy(true); try { setP(await run(budget)); } finally { setBusy(false); } }}>
+          <Scales weight="bold" />{busy ? "scoring…" : "optimise"}
         </button>
-        {p && <span className="text-xs text-fg-faint">{p.evaluated} portfolios scored exhaustively, both adversaries</span>}
+        {p && <span className="text-xs text-faint">{p.evaluated} portfolios scored, both adversaries</span>}
       </div>
       {p ? (
-        <div className="mt-3 flex gap-3">
-          <Col title="Rank by paths eliminated (the brief)" ids={p.naive} cost={p.naive_cost} reduction={p.naive_risk_reduction} broken={p.naive_broken_flows} good={false} />
+        <div className="mt-4 flex gap-3">
+          <Col title="Rank by paths eliminated — the brief" ids={p.naive} cost={p.naive_cost} reduction={p.naive_risk_reduction} broken={p.naive_broken_flows} good={false} />
           <Col title="Constrained optimum — never break a P1/P2 flow" ids={p.constrained} cost={p.constrained_cost} reduction={p.constrained_risk_reduction} broken={p.constrained_broken_flows} good />
         </div>
       ) : (
-        <div className="mt-2 text-sm text-fg-muted">Every subset of the catalogue within budget, scored with the same route policy the agent uses; any portfolio that breaks a P1/P2 flow is discarded.</div>
+        <p className="mt-2 max-w-[52ch] text-sm text-muted">Every subset of the catalogue within budget, scored with the same route policy the agent uses. Any portfolio that breaks a P1/P2 flow is discarded before ranking.</p>
       )}
-    </div>
+    </section>
   );
 }
