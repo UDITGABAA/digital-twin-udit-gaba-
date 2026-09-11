@@ -22,9 +22,9 @@ LATERAL = {"rdp_lateral": ("rdp", 3389), "ssh_lateral": ("ssh", 22), "smb_latera
 EVID = ["observed", "inventory", "inferred", "assumed"]
 
 
-def random_scenario(seed: int) -> Scenario:
+def random_scenario(seed: int, n_assets: int | None = None, n_ids: int | None = None, fanout: int = 3) -> Scenario:
     rng = random.Random(seed)
-    n_assets = rng.randint(6, 14)
+    n_assets = n_assets or rng.randint(6, 14)
     assets = [Asset(id="internet", name="Internet", kind="internet", zone="external", criticality=1)]
     for i in range(1, n_assets):
         zone = rng.choice(ZONES[1:])
@@ -33,14 +33,14 @@ def random_scenario(seed: int) -> Scenario:
     target = rng.choice([a for a in assets if a.id != "internet"])
     assets = [a.model_copy(update={"criticality": 5, "crown_jewel": True}) if a.id == target.id else a for a in assets]
     ids = [Identity(id=f"i{k}", name=f"Identity {k}", kind=rng.choice(["user", "admin", "service_account"]), tier=rng.randint(0, 2))
-           for k in range(rng.randint(3, 7))]
+           for k in range(n_ids or rng.randint(3, 7))]
     inner = [a for a in assets if a.id != "internet"]
     grants: list[PrivilegeGrant] = []
     edges: set[Edge] = set()
 
     # A guaranteed credential spine, so every twin has at least one real multi-hop route:
     # internet -phish-> w0 (admin) -dump-> creds(i0) -lateral-> w1 (i0 login/admin) -dump-> creds(i1) ... -> target
-    spine_len = rng.randint(2, min(4, len(inner)))
+    spine_len = rng.randint(2, min(4 if n_assets <= 14 else 7, len(inner)))
     spine = rng.sample([x for x in inner if x.id != target.id], k=spine_len - 1) + [target]
     edges.add(Edge(src="internet", dst=spine[0].id, technique="phish"))
     for k in range(len(spine) - 1):
@@ -64,7 +64,7 @@ def random_scenario(seed: int) -> Scenario:
             edges.add(Edge(src=x.id, dst=x.id, technique="cred_dump"))
         if rng.random() < 0.6:
             edges.add(Edge(src=x.id, dst=x.id, technique="priv_esc_local"))
-        for y in rng.sample(inner, k=min(len(inner), rng.randint(1, 3))):
+        for y in rng.sample(inner, k=min(len(inner), rng.randint(1, fanout))):
             if y.id != x.id:
                 edges.add(Edge(src=x.id, dst=y.id, technique=rng.choice(list(LATERAL)), evidence=rng.choice(EVID)))
     edges.add(Edge(src=target.id, dst="internet", technique="exfil_c2"))

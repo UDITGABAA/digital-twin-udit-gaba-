@@ -4,7 +4,9 @@ DFS over (node, frozenset(capabilities_held)).
 Capabilities accumulate.
 An edge is admissible from any state whose caps >= edge.requires.
 Runs ONCE per twin, cached.
-Hard caps: max_depth=8, max_paths=5000, raises SearchBudgetExceeded.
+Hard caps: max_depth=8, max_paths=5000 completed routes, max_states=20000 expanded states;
+each raises SearchBudgetExceeded rather than hanging. max_states is what bounds time on a
+dense-privilege twin, where the DFS can explore far more states than it completes routes.
 """
 
 from typing import List, Tuple, Set, Optional, Dict
@@ -31,7 +33,8 @@ def search(
     twin: Twin,
     *,
     max_depth: int = 8,
-    max_paths: int = 5000
+    max_paths: int = 5000,
+    max_states: int = 20000,
 ) -> Inventory:
     """Find all simple attack paths from agent's starting zones to target.
     
@@ -47,7 +50,10 @@ def search(
         Maximum number of edge hops along any path (default: 8).
     max_paths : int
         Maximum number of discovered routes before raising SearchBudgetExceeded (default: 5000).
+    max_states : int
+        Maximum number of DFS state expansions before raising SearchBudgetExceeded (default: 20000).
     """
+    expansions = [0]
     start_assets = [
         asset for asset in twin.assets
         if asset.zone in agent.start_zones
@@ -81,11 +87,18 @@ def search(
     ) -> None:
         if len(discovered_routes) >= max_paths:
             raise SearchBudgetExceeded(f"Exceeded max_paths={max_paths}")
+        expansions[0] += 1
+        if expansions[0] > max_states:
+            raise SearchBudgetExceeded(f"Exceeded max_states={max_states} (dense privileges; tighten the twin or max_depth)")
 
         if len(current_path) >= max_depth:
             return
 
-        for edge in edges:
+        # Only edges leaving a foothold we have stood on can be admissible (edge.src == current
+        # node or an earlier foothold). Gather them from the per-source index and keep the
+        # original tuple order, so discovery order - and therefore the inventory - is unchanged.
+        cands = sorted(item for src in caps_when_left_node for item in by_src.get(src, ()))
+        for _, edge in cands:
             # 1. Edge must be feasible given currently held capabilities
             if not edge.requires.issubset(current_caps):
                 continue
@@ -152,6 +165,10 @@ def search(
                     new_caps_left[current_node] = current_caps
                     new_caps_left[edge.dst] = next_caps
                     dfs(edge.dst, next_caps, new_path, new_visited_nodes, new_caps_left, used_self_edges, visited_states)
+
+    by_src: Dict[str, list] = {}
+    for i, e in enumerate(edges):
+        by_src.setdefault(e.src, []).append((i, e))
 
     # Launch DFS from each start asset
     for start_id in sorted(start_asset_ids):

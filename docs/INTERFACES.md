@@ -46,7 +46,8 @@ class Inventory(BaseModel, frozen=True):
     routes: tuple[Route, ...]            # Route = tuple[CompiledEdge, ...], start -> target
     naive_count: int                     # len(routes) when compiled with naive=True
 def search(edges: tuple[CompiledEdge, ...], agent: Agent, twin: Twin,
-           *, max_depth: int = 8, max_paths: int = 5000) -> Inventory
+           *, max_depth: int = 8, max_paths: int = 5000, max_states: int = 20000) -> Inventory
+    # raises SearchBudgetExceeded on any cap; max_states bounds wall time on dense twins
     # starts: every asset in agent.start_zones with caps = agent.capabilities | {session:<start>}
     # success: reaching agent.target with session: or admin: on it (objective specific_target)
     #          or holding data:<target> after an exfil edge (objective exfil)

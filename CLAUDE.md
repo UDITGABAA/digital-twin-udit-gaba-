@@ -310,9 +310,12 @@ Capabilities only accumulate. **An edge is admissible from any state whose caps 
 `edge.requires`** — `session:src` in `requires` is what ties it to a foothold, so an
 attacker holding sessions on two hosts may act from either; `node` is the last `dst`, kept
 for route rendering and the target check. DFS simple paths to `agent.target`. Hard caps
-`max_depth=8`, `max_paths=5000`, raise `SearchBudgetExceeded` rather than hang. Produces
-the **path inventory** and, compiled with `naive=True`, the headline "N critical paths"
-number.
+`max_depth=8`, `max_paths=5000` completed routes, **`max_states=20000` expanded states** —
+each raises `SearchBudgetExceeded` rather than hang. `max_states` is what bounds time on a
+dense-privilege twin (measured: 400 dense assets, 56k compiled edges, raises in 0.3 s; the
+demo twins need 9–22 expansions). Edges are indexed by source host so each expansion scans
+only edges leaving a foothold, in the original order. Produces the **path inventory** and,
+compiled with `naive=True`, the headline "N critical paths" number.
 
 **(b) Plan-then-execute agent** — `engine/walk.py`. Used for ALL Monte Carlo statistics.
 
