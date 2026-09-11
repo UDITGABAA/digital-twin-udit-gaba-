@@ -28,7 +28,8 @@ digital-twin/                     (repo: UDITGABAA/digital-twin-udit-gaba-, bran
 │   └── GOVERNANCE.md · IMPLEMENTATION_PLAN.md · INTERFACES.md · DEMO_SCRIPT.md · SLIDES.md · STATUS.md
 │
 ├── scripts/
-│   └── build_golden.py           FinBank story -> scenarios/golden.json + golden_sync.json (never hand-edit the JSON)
+│   ├── build_golden.py           FinBank story -> scenarios/golden.json + golden_sync.json (never hand-edit the JSON)
+│   └── demo.ps1 · demo.sh        one command: install, test (stop if red), build, start both servers
 │
 ├── engine/                       ══ A: engine ══
 │   ├── models.py                 FROZEN CONTRACT (+ twin_hash)
@@ -47,7 +48,7 @@ digital-twin/                     (repo: UDITGABAA/digital-twin-udit-gaba-, bran
 │   └── optimize.py               risk() (deterministic upper bound) + exhaustive constrained optimize()
 │
 ├── server/
-│   └── app.py                    ══ D ══ FastAPI, all endpoints, in-memory twin + verdict dicts
+│   └── app.py                    ══ D ══ FastAPI; router at "" and "/api"; serves dashboard/dist at "/" if built
 │
 ├── scenarios/                    ══ D ══
 │   ├── golden.json               FinBank

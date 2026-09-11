@@ -4,8 +4,10 @@ Numbers below are **pinned by `tests/test_scenario.py`** (seed 1, n = 1000, agen
 criminal crew*). If `pytest` is green, these are the numbers on stage. Rehearsed numbers equal
 stage numbers.
 
-Before the panel: `uvicorn server.app:app --port 8000` and `npm run dev --prefix dashboard`,
-open http://localhost:5173, click **reset demo**. Second laptop running the same build.
+Before the panel: `powershell -ExecutionPolicy Bypass -File scripts/demo.ps1` (installs, runs
+the tests — stop if red — builds, opens both servers). Open http://localhost:5173, click
+**reset demo**. **If Vite dies mid-demo, switch the browser to http://localhost:8000** — uvicorn
+serves the built dashboard by itself, same numbers. Second laptop running the same build.
 
 | # | Time | Beat | Click | Say | Numbers on screen |
 |---|---|---|---|---|---|

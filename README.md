@@ -59,6 +59,11 @@ the FinBank scenario) → [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md).
 
 ## Run
 
+One command (installs, tests, builds, opens both servers):
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/demo.ps1
+```
+(macOS/Linux: `bash scripts/demo.sh`.) By hand:
 ```bash
 pip install -r requirements.txt
 ```
@@ -69,6 +74,9 @@ python -m uvicorn server.app:app --port 8000
 npm install --prefix dashboard && npm run dev --prefix dashboard
 ```
 Open http://localhost:5173. The dashboard proxies `/api` to `:8000`.
+
+**Fallback if Vite misbehaves on stage:** `npm run build --prefix dashboard` once, then
+`uvicorn` alone serves the built dashboard at http://localhost:8000 (API under `/api`).
 
 ```bash
 pytest

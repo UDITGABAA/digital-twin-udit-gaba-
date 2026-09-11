@@ -1,8 +1,12 @@
 """FastAPI surface over the engine. Localhost only. No database: scenarios are JSON files,
 twins live in an in-memory dict keyed by twin hash, results in a dict keyed by request."""
 
-from fastapi import FastAPI, HTTPException
+from pathlib import Path
+
+from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from engine.blast import Blast, blast_radius
@@ -20,6 +24,13 @@ from rules.optimize import Portfolio, optimize
 app = FastAPI(title="Security Change Sandbox", version="2.1")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
                    allow_methods=["*"], allow_headers=["*"])
+api = APIRouter()   # included at "" (dev: Vite proxies /api -> :8000) and at "/api" (fallback: uvicorn alone serves dashboard/dist)
+
+
+@app.exception_handler(Exception)
+async def _json_errors(_: Request, exc: Exception) -> JSONResponse:
+    """Never hand the dashboard an HTML 500 on stage; say what broke."""
+    return JSONResponse(status_code=500, content={"error": type(exc).__name__, "detail": str(exc)})
 
 TECH = load_techniques()
 SCENARIO: Scenario = load_scenario("golden")
@@ -64,18 +75,18 @@ _load("golden")
 
 # --- scenarios / twins ---------------------------------------------------------------------
 
-@app.get("/scenarios")
+@api.get("/scenarios")
 def scenarios() -> dict:
     return {"scenarios": list_scenarios(), "current": SCENARIO.twin.id}
 
 
-@app.post("/scenarios/{name}/load")
+@api.post("/scenarios/{name}/load")
 def load(name: str) -> Twin:
     """The ONE sync action: re-import a scenario file (e.g. golden_sync) as the current twin."""
     return _load(name).twin
 
 
-@app.get("/twin/{twin_id}")
+@api.get("/twin/{twin_id}")
 def get_twin(twin_id: str) -> Twin:
     return _twin(twin_id)
 
@@ -86,7 +97,7 @@ class CloneRequest(BaseModel):
     label: str = "what-if"
 
 
-@app.post("/twin/{twin_id}/clone")
+@api.post("/twin/{twin_id}/clone")
 def clone_twin(twin_id: str, req: CloneRequest) -> Twin:
     cat = {c.id: c for c in SCENARIO.catalogue}
     try:
@@ -96,18 +107,18 @@ def clone_twin(twin_id: str, req: CloneRequest) -> Twin:
     return _register(clone(_twin(twin_id), add_controls=controls, add_grants=req.add_grants), req.label)
 
 
-@app.get("/agents")
+@api.get("/agents")
 def agents() -> tuple[Agent, ...]:
     return SCENARIO.agents
 
 
-@app.get("/controls/{twin_id}")
+@api.get("/controls/{twin_id}")
 def controls(twin_id: str) -> dict:
     twin = _twin(twin_id)
     return {"applied": twin.controls, "catalogue": SCENARIO.catalogue}
 
 
-@app.get("/graph/{twin_id}")
+@api.get("/graph/{twin_id}")
 def graph(twin_id: str) -> dict:
     """Assets + compiled attack edges + flows in a shape React Flow can draw directly."""
     twin = _twin(twin_id)
@@ -124,7 +135,7 @@ def graph(twin_id: str) -> dict:
             "attack_edges": list(seen.values()), "flows": twin.flows, "controls": twin.controls}
 
 
-@app.get("/paths/{twin_id}")
+@api.get("/paths/{twin_id}")
 def paths(twin_id: str, agent_id: str = "external") -> dict:
     """Attack path discovery: the complete inventory (controls treated as perfect = the
     industry path count) and the routes the agent actually rates highest."""
@@ -149,7 +160,7 @@ class SimulateRequest(BaseModel):
     seed: int = 1
 
 
-@app.post("/simulate")
+@api.post("/simulate")
 def run_simulate(req: SimulateRequest) -> Result:
     twin = _twin(req.twin_id)
     try:
@@ -166,7 +177,7 @@ class EvaluateRequest(BaseModel):
     n: int = 1000
 
 
-@app.post("/evaluate-change")
+@api.post("/evaluate-change")
 def run_evaluate(req: EvaluateRequest) -> ChangeVerdict:
     twin = _twin(req.twin_id)
     key = (twin.id, req.control_ids, req.agent_ids, req.seed, req.n)
@@ -193,12 +204,12 @@ class OptimizeRequest(BaseModel):
     agent_ids: tuple[str, ...] = ("external", "insider")
 
 
-@app.post("/optimize")
+@api.post("/optimize")
 def run_optimize(req: OptimizeRequest) -> Portfolio:
     return optimize(SCENARIO, req.budget, req.agent_ids, twin=_twin(req.twin_id), techniques=TECH)
 
 
-@app.get("/matrix/{twin_id}")
+@api.get("/matrix/{twin_id}")
 def matrix(twin_id: str, seed: int = 1, n: int = 500) -> dict:
     """Controls x agents: effort increase % (null = route eliminated) and p_success delta."""
     twin = _twin(twin_id)
@@ -217,7 +228,7 @@ def matrix(twin_id: str, seed: int = 1, n: int = 500) -> dict:
     return {"twin_id": twin.id, "agents": [a.id for a in SCENARIO.agents], "rows": rows}
 
 
-@app.get("/blast-radius/{twin_id}/{asset_id}")
+@api.get("/blast-radius/{twin_id}/{asset_id}")
 def blast(twin_id: str, asset_id: str) -> Blast:
     twin = _twin(twin_id)
     if asset_id not in {a.id for a in twin.assets}:
@@ -225,10 +236,20 @@ def blast(twin_id: str, asset_id: str) -> Blast:
     return blast_radius(twin, compile(twin, TECH), asset_id)
 
 
-@app.get("/lineage/{twin_id}")
+@api.get("/lineage/{twin_id}")
 def lineage(twin_id: str) -> dict:
     _twin(twin_id)
     nodes = [{"id": t.id, "parent_id": t.parent_id, "label": LABELS.get(t.id, t.id[:8]),
               "controls": [c.id for c in t.controls]} for t in TWINS.values()]
     edges = [[t.parent_id, t.id] for t in TWINS.values() if t.parent_id in TWINS]
     return {"nodes": nodes, "edges": edges}
+
+
+app.include_router(api)
+app.include_router(api, prefix="/api")
+
+DIST = Path(__file__).resolve().parent.parent / "dashboard" / "dist"
+if DIST.is_dir():
+    # Fallback for the demo: `npm run build --prefix dashboard` once, then uvicorn alone serves
+    # the dashboard at http://localhost:8000 with the API under /api. No Vite needed on stage.
+    app.mount("/", StaticFiles(directory=DIST, html=True), name="dashboard")

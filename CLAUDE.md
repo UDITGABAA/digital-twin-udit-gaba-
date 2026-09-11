@@ -396,8 +396,9 @@ non-interactive service identities."* Never "service accounts cannot MFA".
 - **No database.** JSON files + in-memory dict keyed by twin hash.
 - Frontend: React 18, TypeScript, Vite, Tailwind, React Flow (graph), Recharts (the
   overlaid attacker-effort histograms — the thesis made visible).
-- **Run on localhost. Do not deploy.** Two terminals, `uvicorn` + `vite`. Second laptop
-  as hot backup.
+- **Run on localhost. Do not deploy.** Two terminals, `uvicorn` + `vite` (`scripts/demo.ps1`
+  starts both). If Vite dies, `uvicorn` alone serves the built dashboard at `:8000`. Second
+  laptop as hot backup.
 - **Determinism is mandatory.** Seeded RNG; seed is part of the cache key. Rehearsed
   numbers must equal stage numbers.
 - **Windows:** `curl` in PowerShell is `Invoke-WebRequest`. Every command in every doc says
