@@ -8,6 +8,10 @@ Everything below exists to make those two failures impossible rather than unlike
 
 ---
 
+> **Solo mode (current):** one person owns every directory. §1 is now a *file map*, not a
+> people map; §2–§9 apply the moment a second person or a second AI session joins. The
+> frozen-contract rule and "run `pytest` before every commit" still hold with one person.
+
 ## 1. Directory ownership — the primary conflict-avoidance mechanism
 
 **People own directories, not features.** Features cut across files; directories do not.

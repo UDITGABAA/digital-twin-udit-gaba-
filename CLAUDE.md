@@ -372,7 +372,9 @@ subsets. For each subset within budget: clone → compile → search → `risk =
 target_crit × Σ p_select × p_route` via `route_policy` (deterministic, no Monte Carlo) →
 broken flows. Discard any subset breaking a flow with `criticality >= 4`. Best = maximum risk
 reduction. No pruning tricks — 1024 is small and the code stays obviously correct. Monte Carlo
-runs only on the winner for display. Also return the naive "top-N by paths eliminated"
+runs only on the winner for display. The deterministic score ignores detection during
+retries, so it is an **upper bound** on simulated `p_success × crit`; `test_scenario.py` pins
+it within 15%. Say "upper bound" on stage, never "the same number". Also return the naive "top-N by paths eliminated"
 portfolio so the demo can contrast it. Only then is "optimal portfolio" a true sentence.
 
 **Blast radius** = `search` seeded with `{session:X, admin:X} ∪ creds of every session on X`.
@@ -455,7 +457,10 @@ profiles (ship one) → matrix view → lineage view.
    Every grant, flow and edge carries evidence; we compute confidence from the elements that
    decided the verdict and lower it — or say 'cannot be determined' — when crucial data is
    missing."** Never "accuracy is an ingestion problem".
-4. *"Isn't a random walk just noise, not adaptation?"* → "It is not a random walk. The agent
+4. *"Why does effort go down for some controls?"* → "Degrade the hard route and the agent stops
+   wasting attempts on it, so the surviving successes are cheaper. That is why *harden the jump
+   host alone* is REVIEW, not DEPLOY — path count would have called it a 62% win."
+5. *"Isn't a random walk just noise, not adaptation?"* → "It is not a random walk. The agent
    scores the feasible routes of the twin it faces and selects among the best five. After a
    control, the feasible set changes and it selects a different route. We show you which."
 

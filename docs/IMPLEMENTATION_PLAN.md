@@ -1,5 +1,15 @@
 # Implementation plan v2.1 — phased, with verifiable exits
 
+> **Status (solo build, repo `UDITGABAA/digital-twin-udit-gaba-`, branch `main`):**
+> P0–P4 complete. `pytest` = 35 green, including `test_scenario.py` which pins every number in
+> `docs/DEMO_SCRIPT.md`. Built: `engine/` (models, clone/hash, search, walk, results, blast,
+> scenario), `rules/` (loader, compile, evaluate, optimize), `server/app.py`, `dashboard/`
+> (decision card, graph, effort histograms, optimiser, sync, blast radius),
+> `scenarios/golden.json` + `golden_sync.json`, `scripts/build_golden.py`.
+> Cut for solo: `/matrix` view, lineage view, generated `types.ts`, CI, narration cache.
+> Remaining = Phase 5: rehearse the run sheet, slides, video fallback, second laptop.
+> The four-track split below is kept as the file map; one person owns all of it now.
+
 Six phases. Each has an **exit criterion that is a command someone runs**, not a feeling.
 Nobody advances a phase on "it looks done."
 

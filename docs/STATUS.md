@@ -1,12 +1,10 @@
-# Status — one line per track per gate, written by the human
+# Status — solo build
 
-| Gate | Hour | A (engine) | B (rules) | C (frontend) | D (integration) |
-|---|---|---|---|---|---|
-| G0 Contract | 1.5 | DONE: models.py dual-export locked, twin_hash canonical | | | |
-| G1 Skeleton | 4 | DONE: fixture tests green, clone(), results.py, search.py | | | |
-| G2 Engine | 9 | DONE: walk.py, simulate(), blast.py, test_invariants.py (40/40 tests) | | | |
-| G3 Differentiator | 14 | | | | |
-| G4 Freeze | 18 | | | | |
-| G5 Rehearsal | 21 | | | | |
-
-Blocked? Say it in the channel within five minutes, then note it here.
+| Gate | Done | Evidence |
+|---|---|---|
+| G0 Contract | yes | `engine/models.py`, `rules/techniques.yaml` (10), `docs/INTERFACES.md`, `scenarios/golden.json` |
+| G1 Skeleton | yes | dashboard renders `/simulate`, `/paths` from the real API |
+| G2 Engine | yes | `test_fixture.py`, `test_invariants.py`, `test_rules.py` green |
+| G3 Differentiator | yes | `/evaluate-change` on `seg_prod_db_full`: BLOCK, F1 named, Medium with unknown, safer option DEPLOY; card renders it |
+| G4 Freeze | yes | optimiser, sync, blast radius merged; `pytest` 35 green |
+| G5 Rehearsal | pending | run `docs/DEMO_SCRIPT.md` twice under four minutes |
