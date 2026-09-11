@@ -1,0 +1,251 @@
+{
+  "scenario_id": "finbank-prod-twin",
+  "name": "FinBank Twin",
+  "version": "1.0.0",
+  "description": "Production Financial Banking Cyber Digital Twin Topology",
+  "environment": "banking_hybrid_cloud",
+  "assets": [
+    {
+      "id": "asset-web-portal",
+      "name": "Online Banking Web Portal",
+      "type": "web_server",
+      "zone": "dmz",
+      "ip_address": "10.0.1.10",
+      "os": "Ubuntu 22.04 LTS",
+      "criticality": "high",
+      "tags": ["frontend", "customer-facing", "public"]
+    },
+    {
+      "id": "asset-api-gateway",
+      "name": "Core Banking API Gateway",
+      "type": "api_gateway",
+      "zone": "application",
+      "ip_address": "10.0.2.15",
+      "os": "Alpine Linux",
+      "criticality": "critical",
+      "tags": ["middleware", "routing", "internal"]
+    },
+    {
+      "id": "asset-auth-service",
+      "name": "Identity & OAuth2 Provider",
+      "type": "auth_service",
+      "zone": "application",
+      "ip_address": "10.0.2.20",
+      "os": "Debian 12",
+      "criticality": "critical",
+      "tags": ["iam", "token-issuer", "security"]
+    },
+    {
+      "id": "asset-core-banking-db",
+      "name": "Financial Ledger Database",
+      "type": "database",
+      "zone": "data_secure",
+      "ip_address": "10.0.3.50",
+      "os": "RHEL 9",
+      "criticality": "critical",
+      "tags": ["database", "pci-dss", "ledger"]
+    },
+    {
+      "id": "asset-payment-processor",
+      "name": "SWIFT / ACH Payment Clearing Service",
+      "type": "microservice",
+      "zone": "application",
+      "ip_address": "10.0.2.35",
+      "os": "Alpine Linux",
+      "criticality": "high",
+      "tags": ["transactions", "payments", "swift"]
+    },
+    {
+      "id": "asset-admin-jumpbox",
+      "name": "Privileged Admin Bastion Host",
+      "type": "bastion",
+      "zone": "management",
+      "ip_address": "10.0.4.5",
+      "os": "Hardened Linux",
+      "criticality": "high",
+      "tags": ["bastion", "ssh", "admin-access"]
+    },
+    {
+      "id": "asset-corp-workstation",
+      "name": "Financial Analyst Corporate Workstation",
+      "type": "workstation",
+      "zone": "corporate_lan",
+      "ip_address": "10.0.10.102",
+      "os": "Windows 11 Enterprise",
+      "criticality": "medium",
+      "tags": ["endpoint", "corporate", "staff"]
+    },
+    {
+      "id": "asset-backup-vault",
+      "name": "Immutable Cold Backup Storage Vault",
+      "type": "storage_vault",
+      "zone": "cold_storage",
+      "ip_address": "10.0.5.99",
+      "os": "Appliance OS",
+      "criticality": "high",
+      "tags": ["backup", "s3-immutable", "disaster-recovery"]
+    },
+    {
+      "id": "asset-siem-server",
+      "name": "Central SIEM & Audit Collector",
+      "type": "siem",
+      "zone": "management",
+      "ip_address": "10.0.4.50",
+      "os": "Ubuntu 22.04 LTS",
+      "criticality": "medium",
+      "tags": ["telemetry", "soc", "auditing"]
+    }
+  ],
+  "identities": [
+    {
+      "id": "id-user-customer",
+      "name": "Retail Banking Customer",
+      "type": "human",
+      "role": "customer",
+      "privilege_level": "unprivileged",
+      "department": "External"
+    },
+    {
+      "id": "id-user-analyst",
+      "name": "Financial Analyst Operator",
+      "type": "human",
+      "role": "staff",
+      "privilege_level": "standard",
+      "department": "Financial Operations"
+    },
+    {
+      "id": "id-user-admin",
+      "name": "Lead Cloud Infrastructure Administrator",
+      "type": "human",
+      "role": "administrator",
+      "privilege_level": "elevated",
+      "department": "DevSecOps"
+    },
+    {
+      "id": "id-svc-payment-app",
+      "name": "Core Payment Processing Service Account",
+      "type": "service_account",
+      "role": "system",
+      "privilege_level": "scoped_database_access",
+      "department": "Engineering"
+    }
+  ],
+  "controls": [
+    {
+      "id": "ctrl-mfa",
+      "name": "FIDO2 / TOTP Multi-Factor Authentication",
+      "type": "authentication",
+      "status": "active",
+      "framework_reference": "NIST SP 800-63B / CIS Control 6",
+      "covered_entities": [
+        "asset-auth-service",
+        "asset-admin-jumpbox"
+      ]
+    },
+    {
+      "id": "ctrl-waf",
+      "name": "Cloud WAF & DDoS Shielding",
+      "type": "network_defense",
+      "status": "active",
+      "framework_reference": "OWASP Top 10 / CIS Control 9",
+      "covered_entities": [
+        "asset-web-portal"
+      ]
+    },
+    {
+      "id": "ctrl-edr",
+      "name": "Next-Gen Endpoint Detection and Response",
+      "type": "host_defense",
+      "status": "active",
+      "framework_reference": "CIS Control 10 / MITRE D3FEND",
+      "covered_entities": [
+        "asset-corp-workstation",
+        "asset-admin-jumpbox"
+      ]
+    },
+    {
+      "id": "ctrl-db-enc",
+      "name": "AES-256 Column Encryption & KMS Key Rotation",
+      "type": "data_protection",
+      "status": "active",
+      "framework_reference": "PCI-DSS Requirement 3.4",
+      "covered_entities": [
+        "asset-core-banking-db"
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "rel-cust-web",
+      "source": "id-user-customer",
+      "target": "asset-web-portal",
+      "relation_type": "ACCESSES",
+      "protocol": "HTTPS",
+      "port": 443,
+      "encrypted": true
+    },
+    {
+      "id": "rel-web-api",
+      "source": "asset-web-portal",
+      "target": "asset-api-gateway",
+      "relation_type": "CONNECTS_TO",
+      "protocol": "gRPC",
+      "port": 50051,
+      "encrypted": true
+    },
+    {
+      "id": "rel-api-auth",
+      "source": "asset-api-gateway",
+      "target": "asset-auth-service",
+      "relation_type": "AUTHENTICATES_VIA",
+      "protocol": "HTTPS",
+      "port": 8443,
+      "encrypted": true
+    },
+    {
+      "id": "rel-api-pay",
+      "source": "asset-api-gateway",
+      "target": "asset-payment-processor",
+      "relation_type": "ROUTES_TO",
+      "protocol": "HTTPS",
+      "port": 8080,
+      "encrypted": true
+    },
+    {
+      "id": "rel-pay-db",
+      "source": "asset-payment-processor",
+      "target": "asset-core-banking-db",
+      "relation_type": "EXECUTES_SQL",
+      "protocol": "TLS/TCP",
+      "port": 5432,
+      "encrypted": true
+    },
+    {
+      "id": "rel-svc-db",
+      "source": "id-svc-payment-app",
+      "target": "asset-core-banking-db",
+      "relation_type": "READS_WRITES",
+      "protocol": "TLS/TCP",
+      "port": 5432,
+      "encrypted": true
+    },
+    {
+      "id": "rel-admin-jump",
+      "source": "id-user-admin",
+      "target": "asset-admin-jumpbox",
+      "relation_type": "LOGS_INTO",
+      "protocol": "SSH",
+      "port": 22,
+      "encrypted": true
+    },
+    {
+      "id": "rel-jump-vault",
+      "source": "asset-admin-jumpbox",
+      "target": "asset-backup-vault",
+      "relation_type": "MANAGES",
+      "protocol": "HTTPS",
+      "port": 443,
+      "encrypted": true
+    }
+  ]
+}
