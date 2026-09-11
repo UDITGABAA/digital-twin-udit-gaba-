@@ -10,7 +10,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 const post = <T,>(path: string, body: unknown) => call<T>(path, { method: "POST", body: JSON.stringify(body) });
 
 export const api = {
-  scenarios: () => call<{ scenarios: string[]; current: string }>("/scenarios"),
+  scenarios: () => call<{ scenarios: { id: string; name: string }[]; current: string; current_scenario: string }>("/scenarios"),
   load: (name: string) => post<Twin>(`/scenarios/${name}/load`, {}),
   twin: (id: string) => call<Twin>(`/twin/${id}`),
   clone: (twin_id: string, control_ids: string[], label: string) => post<Twin>(`/twin/${twin_id}/clone`, { control_ids, label }),

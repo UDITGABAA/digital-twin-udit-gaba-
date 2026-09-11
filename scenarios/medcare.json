@@ -3,40 +3,40 @@
   {
    "capabilities": [],
    "id": "external",
-   "name": "External criminal crew",
+   "name": "External ransomware crew",
    "noise_budget": 3.0,
    "objective": "specific_target",
-   "skill": 0.7,
+   "skill": 0.6,
    "start_zones": [
     "external"
    ],
-   "target": "prod-db"
+   "target": "ehr-db"
   },
   {
    "capabilities": [
-    "creds:u.hr"
+    "creds:vendor.pacs"
    ],
-   "id": "insider",
-   "name": "Disgruntled HR insider",
-   "noise_budget": 2.0,
+   "id": "vendor",
+   "name": "Compromised imaging vendor",
+   "noise_budget": 2.5,
    "objective": "specific_target",
-   "skill": 0.4,
+   "skill": 0.5,
    "start_zones": [
-    "corp"
+    "dmz"
    ],
-   "target": "prod-db"
+   "target": "ehr-db"
   }
  ],
  "catalogue": [
   {
    "cost": 8,
-   "id": "seg_prod_db_full",
+   "id": "seg_ehr_db_full",
    "impacts": [
     {
      "breaks_flows": true,
      "deny": {
       "dst_assets": [
-       "prod-db"
+       "ehr-db"
       ],
       "dst_zones": [],
       "identity_ids": [],
@@ -51,17 +51,17 @@
      "exceptions": []
     }
    ],
-   "name": "Segment prod-db (deny all inbound)"
+   "name": "Segment patient records DB (deny all)"
   },
   {
    "cost": 6,
-   "id": "seg_prod_db_scoped",
+   "id": "seg_ehr_db_scoped",
    "impacts": [
     {
      "breaks_flows": true,
      "deny": {
       "dst_assets": [
-       "prod-db"
+       "ehr-db"
       ],
       "dst_zones": [],
       "identity_ids": [],
@@ -76,11 +76,11 @@
      "exceptions": [
       {
        "dst_assets": [
-        "prod-db"
+        "ehr-db"
        ],
        "dst_zones": [],
        "identity_ids": [
-        "svc.payroll"
+        "svc.ehr"
        ],
        "identity_kinds": [],
        "ports": [
@@ -90,14 +90,35 @@
         "tcp"
        ],
        "src_assets": [
-        "payroll-api"
+        "ehr-app"
        ],
        "src_zones": [],
        "techniques": []
       },
       {
        "dst_assets": [
-        "prod-db"
+        "ehr-db"
+       ],
+       "dst_zones": [],
+       "identity_ids": [
+        "svc.lab"
+       ],
+       "identity_kinds": [],
+       "ports": [
+        5432
+       ],
+       "protocols": [
+        "tcp"
+       ],
+       "src_assets": [
+        "lab-db"
+       ],
+       "src_zones": [],
+       "techniques": []
+      },
+      {
+       "dst_assets": [
+        "ehr-db"
        ],
        "dst_zones": [],
        "identity_ids": [
@@ -111,28 +132,7 @@
         "tcp"
        ],
        "src_assets": [
-        "backup-01"
-       ],
-       "src_zones": [],
-       "techniques": []
-      },
-      {
-       "dst_assets": [
-        "prod-db"
-       ],
-       "dst_zones": [],
-       "identity_ids": [
-        "adm.ops"
-       ],
-       "identity_kinds": [],
-       "ports": [
-        3389
-       ],
-       "protocols": [
-        "rdp"
-       ],
-       "src_assets": [
-        "jump-01"
+        "backup-nas"
        ],
        "src_zones": [],
        "techniques": []
@@ -140,37 +140,11 @@
      ]
     }
    ],
-   "name": "Segment prod-db (allow payroll, backup, ops)"
-  },
-  {
-   "cost": 3,
-   "id": "mfa_humans",
-   "impacts": [
-    {
-     "breaks_flows": false,
-     "deny": {
-      "dst_assets": [],
-      "dst_zones": [],
-      "identity_ids": [],
-      "identity_kinds": [
-       "user",
-       "admin"
-      ],
-      "ports": [],
-      "protocols": [],
-      "src_assets": [],
-      "src_zones": [],
-      "techniques": []
-     },
-     "efficacy": 0.9,
-     "exceptions": []
-    }
-   ],
-   "name": "MFA for user and admin accounts"
+   "name": "Segment patient records DB (allow EHR, lab, backup)"
   },
   {
    "cost": 4,
-   "id": "mfa_all",
+   "id": "mfa_everyone",
    "impacts": [
     {
      "breaks_flows": false,
@@ -179,8 +153,8 @@
       "dst_zones": [],
       "identity_ids": [],
       "identity_kinds": [
-       "user",
-       "admin"
+       "admin",
+       "user"
       ],
       "ports": [],
       "protocols": [],
@@ -210,7 +184,77 @@
      "exceptions": []
     }
    ],
-   "name": "MFA for every account incl. service accounts"
+   "name": "MFA for every account"
+  },
+  {
+   "cost": 3,
+   "id": "mfa_admins_vendors",
+   "impacts": [
+    {
+     "breaks_flows": false,
+     "deny": {
+      "dst_assets": [],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [
+       "admin"
+      ],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": []
+     },
+     "efficacy": 0.9,
+     "exceptions": []
+    },
+    {
+     "breaks_flows": false,
+     "deny": {
+      "dst_assets": [],
+      "dst_zones": [],
+      "identity_ids": [
+       "vendor.pacs"
+      ],
+      "identity_kinds": [],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": []
+     },
+     "efficacy": 0.9,
+     "exceptions": []
+    }
+   ],
+   "name": "MFA for admins and vendor accounts"
+  },
+  {
+   "cost": 2,
+   "id": "patch_portal",
+   "impacts": [
+    {
+     "breaks_flows": false,
+     "deny": {
+      "dst_assets": [
+       "patient-portal"
+      ],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [],
+      "src_zones": [],
+      "techniques": [
+       "exploit_public_app"
+      ]
+     },
+     "efficacy": 0.95,
+     "exceptions": []
+    }
+   ],
+   "name": "Patch the patient portal"
   },
   {
    "cost": 5,
@@ -235,78 +279,24 @@
      "exceptions": []
     }
    ],
-   "name": "EDR with credential-dump prevention"
-  },
-  {
-   "cost": 2,
-   "id": "patch_web_dmz",
-   "impacts": [
-    {
-     "breaks_flows": false,
-     "deny": {
-      "dst_assets": [
-       "web-dmz"
-      ],
-      "dst_zones": [],
-      "identity_ids": [],
-      "identity_kinds": [],
-      "ports": [],
-      "protocols": [],
-      "src_assets": [],
-      "src_zones": [],
-      "techniques": [
-       "exploit_public_app"
-      ]
-     },
-     "efficacy": 0.95,
-     "exceptions": []
-    }
-   ],
-   "name": "Patch the customer web portal"
-  },
-  {
-   "cost": 2,
-   "id": "jump_hardening",
-   "impacts": [
-    {
-     "breaks_flows": false,
-     "deny": {
-      "dst_assets": [
-       "jump-01"
-      ],
-      "dst_zones": [],
-      "identity_ids": [],
-      "identity_kinds": [],
-      "ports": [],
-      "protocols": [],
-      "src_assets": [],
-      "src_zones": [],
-      "techniques": [
-       "priv_esc_local"
-      ]
-     },
-     "efficacy": 0.8,
-     "exceptions": []
-    }
-   ],
-   "name": "Harden the jump host (no local priv-esc)"
+   "name": "EDR credential-dump prevention"
   },
   {
    "cost": 1,
-   "id": "disable_smb_share",
+   "id": "cut_vendor_vpn",
    "impacts": [
     {
      "breaks_flows": true,
      "deny": {
       "dst_assets": [
-       "fileshare"
+       "pacs-imaging"
       ],
       "dst_zones": [],
       "identity_ids": [],
       "identity_kinds": [],
       "ports": [],
       "protocols": [
-       "smb"
+       "rdp"
       ],
       "src_assets": [],
       "src_zones": [],
@@ -316,10 +306,37 @@
      "exceptions": []
     }
    ],
-   "name": "Decommission the HR SMB share"
+   "name": "Remove the vendor VPN"
+  },
+  {
+   "cost": 2,
+   "id": "isolate_backup",
+   "impacts": [
+    {
+     "breaks_flows": true,
+     "deny": {
+      "dst_assets": [
+       "ehr-db"
+      ],
+      "dst_zones": [],
+      "identity_ids": [],
+      "identity_kinds": [],
+      "ports": [],
+      "protocols": [],
+      "src_assets": [
+       "backup-nas"
+      ],
+      "src_zones": [],
+      "techniques": []
+     },
+     "efficacy": 0.95,
+     "exceptions": []
+    }
+   ],
+   "name": "Isolate the backup NAS from the DB"
   }
  ],
- "name": "FinBank",
+ "name": "MedCare hospital",
  "twin": {
   "assets": [
    {
@@ -333,407 +350,395 @@
    {
     "criticality": 3,
     "crown_jewel": false,
-    "id": "web-dmz",
+    "id": "patient-portal",
     "kind": "server",
-    "name": "Customer web portal",
+    "name": "Patient portal",
     "zone": "dmz"
    },
    {
-    "criticality": 2,
+    "criticality": 3,
     "crown_jewel": false,
-    "id": "ws-dev",
-    "kind": "workstation",
-    "name": "Developer workstation",
-    "zone": "corp"
-   },
-   {
-    "criticality": 2,
-    "crown_jewel": false,
-    "id": "ws-hr",
-    "kind": "workstation",
-    "name": "HR workstation",
-    "zone": "corp"
-   },
-   {
-    "criticality": 2,
-    "crown_jewel": false,
-    "id": "fileshare",
-    "kind": "share",
-    "name": "HR file share",
-    "zone": "corp"
+    "id": "vpn-gw",
+    "kind": "server",
+    "name": "Vendor VPN gateway",
+    "zone": "dmz"
    },
    {
     "criticality": 3,
     "crown_jewel": false,
-    "id": "ci-runner",
-    "kind": "server",
-    "name": "CI runner",
-    "zone": "corp"
+    "id": "ws-nurse",
+    "kind": "workstation",
+    "name": "Nursing station",
+    "zone": "clinical"
    },
    {
-    "criticality": 3,
+    "criticality": 2,
     "crown_jewel": false,
-    "id": "jump-01",
-    "kind": "server",
-    "name": "Ops jump host",
-    "zone": "mgmt"
+    "id": "ws-admin",
+    "kind": "workstation",
+    "name": "IT admin workstation",
+    "zone": "corp"
    },
    {
     "criticality": 4,
     "crown_jewel": false,
-    "id": "payroll-api",
+    "id": "ehr-app",
     "kind": "server",
-    "name": "Payroll API",
+    "name": "EHR application server",
     "zone": "prod"
    },
    {
     "criticality": 3,
     "crown_jewel": false,
-    "id": "backup-01",
+    "id": "pacs-imaging",
     "kind": "server",
-    "name": "Backup server",
+    "name": "PACS imaging server",
     "zone": "prod"
+   },
+   {
+    "criticality": 4,
+    "crown_jewel": false,
+    "id": "lab-db",
+    "kind": "database",
+    "name": "Lab results database",
+    "zone": "prod"
+   },
+   {
+    "criticality": 3,
+    "crown_jewel": false,
+    "id": "backup-nas",
+    "kind": "share",
+    "name": "Backup NAS",
+    "zone": "mgmt"
    },
    {
     "criticality": 5,
     "crown_jewel": true,
-    "id": "prod-db",
+    "id": "ehr-db",
     "kind": "database",
-    "name": "Core banking database",
+    "name": "Patient records database",
     "zone": "prod"
    }
   ],
   "controls": [],
   "edges": [
    {
-    "dst": "ws-dev",
-    "evidence": "inventory",
-    "src": "internet",
-    "technique": "phish"
-   },
-   {
-    "dst": "ws-hr",
-    "evidence": "inventory",
-    "src": "internet",
-    "technique": "phish"
-   },
-   {
-    "dst": "web-dmz",
+    "dst": "patient-portal",
     "evidence": "observed",
     "src": "internet",
     "technique": "exploit_public_app"
    },
    {
-    "dst": "ci-runner",
+    "dst": "ehr-app",
     "evidence": "inferred",
-    "src": "web-dmz",
+    "src": "patient-portal",
     "technique": "exploit_public_app"
    },
    {
-    "dst": "ws-dev",
+    "dst": "vpn-gw",
     "evidence": "inventory",
-    "src": "ws-dev",
-    "technique": "cred_dump"
+    "src": "internet",
+    "technique": "exploit_public_app"
    },
    {
-    "dst": "ws-hr",
+    "dst": "ws-nurse",
     "evidence": "inventory",
-    "src": "ws-hr",
-    "technique": "cred_dump"
+    "src": "internet",
+    "technique": "phish"
    },
    {
-    "dst": "jump-01",
+    "dst": "ws-admin",
     "evidence": "inventory",
-    "src": "jump-01",
-    "technique": "priv_esc_local"
+    "src": "internet",
+    "technique": "phish"
    },
    {
-    "dst": "jump-01",
+    "dst": "pacs-imaging",
     "evidence": "inventory",
-    "src": "jump-01",
-    "technique": "cred_dump"
-   },
-   {
-    "dst": "ci-runner",
-    "evidence": "inventory",
-    "src": "ci-runner",
-    "technique": "priv_esc_local"
-   },
-   {
-    "dst": "ci-runner",
-    "evidence": "inventory",
-    "src": "ci-runner",
-    "technique": "cred_dump"
-   },
-   {
-    "dst": "backup-01",
-    "evidence": "inventory",
-    "src": "backup-01",
-    "technique": "cred_dump"
-   },
-   {
-    "dst": "fileshare",
-    "evidence": "inventory",
-    "src": "fileshare",
-    "technique": "creds_in_files"
-   },
-   {
-    "dst": "jump-01",
-    "evidence": "inventory",
-    "src": "ws-dev",
+    "src": "vpn-gw",
     "technique": "rdp_lateral"
    },
    {
-    "dst": "ci-runner",
+    "dst": "ws-nurse",
     "evidence": "inventory",
-    "src": "ws-dev",
-    "technique": "ssh_lateral"
+    "src": "ws-nurse",
+    "technique": "cred_dump"
    },
    {
-    "dst": "fileshare",
+    "dst": "ehr-app",
     "evidence": "inventory",
-    "src": "ws-hr",
+    "src": "ws-nurse",
+    "technique": "rdp_lateral"
+   },
+   {
+    "dst": "ehr-app",
+    "evidence": "inventory",
+    "src": "ehr-app",
+    "technique": "priv_esc_local"
+   },
+   {
+    "dst": "ehr-app",
+    "evidence": "inventory",
+    "src": "ehr-app",
+    "technique": "cred_dump"
+   },
+   {
+    "dst": "ehr-db",
+    "evidence": "inventory",
+    "src": "ehr-app",
+    "technique": "db_login"
+   },
+   {
+    "dst": "ws-admin",
+    "evidence": "inventory",
+    "src": "ws-admin",
+    "technique": "cred_dump"
+   },
+   {
+    "dst": "backup-nas",
+    "evidence": "inventory",
+    "src": "ws-admin",
     "technique": "smb_lateral"
    },
    {
-    "dst": "backup-01",
+    "dst": "ehr-db",
     "evidence": "inventory",
-    "src": "ci-runner",
+    "src": "ws-admin",
+    "technique": "rdp_lateral"
+   },
+   {
+    "dst": "backup-nas",
+    "evidence": "inventory",
+    "src": "backup-nas",
+    "technique": "cred_dump"
+   },
+   {
+    "dst": "ehr-db",
+    "evidence": "inventory",
+    "src": "backup-nas",
+    "technique": "db_login"
+   },
+   {
+    "dst": "pacs-imaging",
+    "evidence": "inventory",
+    "src": "pacs-imaging",
+    "technique": "cred_dump"
+   },
+   {
+    "dst": "lab-db",
+    "evidence": "inventory",
+    "src": "pacs-imaging",
     "technique": "ssh_lateral"
    },
    {
-    "dst": "prod-db",
+    "dst": "lab-db",
     "evidence": "inventory",
-    "src": "jump-01",
-    "technique": "rdp_lateral"
+    "src": "lab-db",
+    "technique": "priv_esc_local"
    },
    {
-    "dst": "backup-01",
+    "dst": "lab-db",
     "evidence": "inventory",
-    "src": "jump-01",
-    "technique": "rdp_lateral"
+    "src": "lab-db",
+    "technique": "cred_dump"
    },
    {
-    "dst": "prod-db",
+    "dst": "ehr-db",
     "evidence": "inventory",
-    "src": "backup-01",
-    "technique": "db_login"
-   },
-   {
-    "dst": "prod-db",
-    "evidence": "inventory",
-    "src": "ws-hr",
-    "technique": "db_login"
-   },
-   {
-    "dst": "prod-db",
-    "evidence": "inventory",
-    "src": "payroll-api",
+    "src": "lab-db",
     "technique": "db_login"
    },
    {
     "dst": "internet",
     "evidence": "inventory",
-    "src": "prod-db",
+    "src": "ehr-db",
     "technique": "exfil_c2"
    }
   ],
   "flows": [
    {
     "criticality": 5,
-    "dst": "prod-db",
+    "dst": "ehr-db",
     "evidence": "inventory",
-    "id": "F1",
-    "identity_id": "svc.payroll",
-    "name": "Payroll API -> core DB",
+    "id": "G1",
+    "identity_id": "svc.ehr",
+    "name": "EHR app -> patient records",
     "port": 5432,
     "protocol": "tcp",
-    "src": "payroll-api"
+    "src": "ehr-app"
    },
    {
     "criticality": 4,
-    "dst": "prod-db",
+    "dst": "ehr-db",
     "evidence": "inferred",
-    "id": "F2",
-    "identity_id": "svc.backup",
-    "name": "Nightly backup -> core DB",
+    "id": "G2",
+    "identity_id": "svc.lab",
+    "name": "Lab results feed -> patient records",
     "port": 5432,
     "protocol": "tcp",
-    "src": "backup-01"
-   },
-   {
-    "criticality": 2,
-    "dst": "jump-01",
-    "evidence": "observed",
-    "id": "F3",
-    "identity_id": "u.dev",
-    "name": "Dev RDP to jump host",
-    "port": 3389,
-    "protocol": "rdp",
-    "src": "ws-dev"
+    "src": "lab-db"
    },
    {
     "criticality": 3,
-    "dst": "backup-01",
+    "dst": "ehr-db",
+    "evidence": "assumed",
+    "id": "G3",
+    "identity_id": "svc.backup",
+    "name": "Nightly backup -> patient records",
+    "port": 5432,
+    "protocol": "tcp",
+    "src": "backup-nas"
+   },
+   {
+    "criticality": 3,
+    "dst": "pacs-imaging",
     "evidence": "inventory",
-    "id": "F4",
-    "identity_id": "svc.ci",
-    "name": "CI deploy to backup server",
-    "port": 22,
-    "protocol": "ssh",
-    "src": "ci-runner"
+    "id": "G4",
+    "identity_id": "vendor.pacs",
+    "name": "Vendor remote support -> PACS",
+    "port": 3389,
+    "protocol": "rdp",
+    "src": "vpn-gw"
+   },
+   {
+    "criticality": 4,
+    "dst": "ehr-app",
+    "evidence": "observed",
+    "id": "G5",
+    "identity_id": "nurse.k",
+    "name": "Clinicians -> EHR app",
+    "port": 3389,
+    "protocol": "rdp",
+    "src": "ws-nurse"
    },
    {
     "criticality": 2,
-    "dst": "fileshare",
+    "dst": "backup-nas",
     "evidence": "observed",
-    "id": "F5",
-    "identity_id": "u.hr",
-    "name": "HR file share access",
+    "id": "G6",
+    "identity_id": "it.admin",
+    "name": "Admin -> backup NAS",
     "port": 445,
     "protocol": "smb",
-    "src": "ws-hr"
-   },
-   {
-    "criticality": 3,
-    "dst": "prod-db",
-    "evidence": "observed",
-    "id": "F6",
-    "identity_id": "adm.ops",
-    "name": "Ops maintenance RDP to DB host",
-    "port": 3389,
-    "protocol": "rdp",
-    "src": "jump-01"
+    "src": "ws-admin"
    }
   ],
   "grants": [
    {
-    "asset_id": "ws-dev",
+    "asset_id": "ws-nurse",
     "capability": "session",
     "evidence": "observed",
-    "identity_id": "u.dev"
+    "identity_id": "nurse.k"
    },
    {
-    "asset_id": "jump-01",
+    "asset_id": "ehr-app",
     "capability": "login",
-    "evidence": "inventory",
-    "identity_id": "u.dev"
+    "evidence": "observed",
+    "identity_id": "nurse.k"
    },
    {
-    "asset_id": "ci-runner",
+    "asset_id": "ws-admin",
+    "capability": "session",
+    "evidence": "observed",
+    "identity_id": "it.admin"
+   },
+   {
+    "asset_id": "backup-nas",
+    "capability": "admin",
+    "evidence": "inventory",
+    "identity_id": "it.admin"
+   },
+   {
+    "asset_id": "ehr-db",
+    "capability": "admin",
+    "evidence": "inventory",
+    "identity_id": "it.admin"
+   },
+   {
+    "asset_id": "pacs-imaging",
     "capability": "admin",
     "evidence": "inferred",
-    "identity_id": "u.dev"
+    "identity_id": "vendor.pacs"
    },
    {
-    "asset_id": "ws-hr",
-    "capability": "session",
-    "evidence": "observed",
-    "identity_id": "u.hr"
-   },
-   {
-    "asset_id": "fileshare",
+    "asset_id": "lab-db",
     "capability": "login",
-    "evidence": "inventory",
-    "identity_id": "u.hr"
-   },
-   {
-    "asset_id": "jump-01",
-    "capability": "session",
-    "evidence": "observed",
-    "identity_id": "adm.ops"
-   },
-   {
-    "asset_id": "prod-db",
-    "capability": "admin",
-    "evidence": "inventory",
-    "identity_id": "adm.ops"
-   },
-   {
-    "asset_id": "backup-01",
-    "capability": "admin",
-    "evidence": "inventory",
-    "identity_id": "adm.ops"
-   },
-   {
-    "asset_id": "payroll-api",
-    "capability": "session",
-    "evidence": "inventory",
-    "identity_id": "svc.payroll"
-   },
-   {
-    "asset_id": "prod-db",
-    "capability": "login",
-    "evidence": "inventory",
-    "identity_id": "svc.payroll"
-   },
-   {
-    "asset_id": "fileshare",
-    "capability": "session",
     "evidence": "inferred",
-    "identity_id": "svc.payroll"
+    "identity_id": "vendor.pacs"
    },
    {
-    "asset_id": "backup-01",
+    "asset_id": "ehr-app",
+    "capability": "session",
+    "evidence": "inventory",
+    "identity_id": "svc.ehr"
+   },
+   {
+    "asset_id": "ehr-db",
+    "capability": "login",
+    "evidence": "inventory",
+    "identity_id": "svc.ehr"
+   },
+   {
+    "asset_id": "lab-db",
+    "capability": "session",
+    "evidence": "inventory",
+    "identity_id": "svc.lab"
+   },
+   {
+    "asset_id": "ehr-db",
+    "capability": "login",
+    "evidence": "inferred",
+    "identity_id": "svc.lab"
+   },
+   {
+    "asset_id": "backup-nas",
     "capability": "session",
     "evidence": "inventory",
     "identity_id": "svc.backup"
    },
    {
-    "asset_id": "prod-db",
+    "asset_id": "ehr-db",
     "capability": "admin",
-    "evidence": "inferred",
+    "evidence": "assumed",
     "identity_id": "svc.backup"
-   },
-   {
-    "asset_id": "ci-runner",
-    "capability": "session",
-    "evidence": "inventory",
-    "identity_id": "svc.ci"
-   },
-   {
-    "asset_id": "backup-01",
-    "capability": "admin",
-    "evidence": "inventory",
-    "identity_id": "svc.ci"
    }
   ],
-  "id": "ee4a25ce932b7c0f2caa8dcd5eb2c9bd7724a0bdc8ebfd34aa902119c95f2ca5",
+  "id": "726d387d048cfbf79b0db4390f44efd273606a680006fa6e65320c9cc7295833",
   "identities": [
    {
-    "id": "u.dev",
+    "id": "nurse.k",
     "kind": "user",
-    "name": "Dev user (alice)",
+    "name": "Nurse (K. Rao)",
     "tier": 2
    },
    {
-    "id": "u.hr",
-    "kind": "user",
-    "name": "HR user (bob)",
-    "tier": 2
-   },
-   {
-    "id": "adm.ops",
+    "id": "it.admin",
     "kind": "admin",
-    "name": "Ops administrator",
+    "name": "IT administrator",
     "tier": 0
    },
    {
-    "id": "svc.payroll",
+    "id": "vendor.pacs",
+    "kind": "user",
+    "name": "Imaging vendor engineer",
+    "tier": 2
+   },
+   {
+    "id": "svc.ehr",
     "kind": "service_account",
-    "name": "Payroll service account",
+    "name": "EHR service account",
+    "tier": 1
+   },
+   {
+    "id": "svc.lab",
+    "kind": "service_account",
+    "name": "Lab interface account",
     "tier": 1
    },
    {
     "id": "svc.backup",
     "kind": "service_account",
     "name": "Backup service account",
-    "tier": 1
-   },
-   {
-    "id": "svc.ci",
-    "kind": "service_account",
-    "name": "CI service account",
     "tier": 1
    }
   ],

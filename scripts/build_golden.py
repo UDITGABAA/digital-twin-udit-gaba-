@@ -127,7 +127,7 @@ sync_twin = sync_twin.model_copy(update={"identities": identities + (contractor,
 sync_twin = sync_twin.model_copy(update={"id": twin_hash(sync_twin)})
 
 out = Path(__file__).resolve().parent.parent / "scenarios"
-for name, twin in (("golden", golden), ("golden_sync", sync_twin)):
-    sc = Scenario(twin=twin, agents=agents, catalogue=catalogue)
+for name, twin, title in (("golden", golden, "FinBank"), ("golden_sync", sync_twin, "FinBank after sync (contractor admin on jump-01)")):
+    sc = Scenario(name=title, twin=twin, agents=agents, catalogue=catalogue)
     (out / f"{name}.json").write_text(json.dumps(sc.model_dump(mode="json"), indent=1, sort_keys=True, default=sorted) + "\n", encoding="utf-8")
     print(name, twin.id[:12], len(twin.assets), "assets", len(twin.edges), "edges", len(twin.flows), "flows", len(catalogue), "controls")

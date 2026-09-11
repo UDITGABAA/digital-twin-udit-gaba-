@@ -81,9 +81,15 @@ Open http://localhost:5173. The dashboard proxies `/api` to `:8000`.
 ```bash
 pytest
 ```
-35 tests: engine fixture + invariants, rules (compiler never invents a transition, scoped
-segmentation semantics), evaluate (verdict rules, confidence), and `test_scenario.py`, which
-pins every number in `docs/DEMO_SCRIPT.md`.
+66 tests: engine fixture + invariants, rules (compiler never invents a transition, scoped
+segmentation semantics), evaluate (verdict rules, confidence), `test_scenario.py`, which pins
+every number in `docs/DEMO_SCRIPT.md`, and `test_fuzz.py`, which builds 30 random twins from
+seeds and checks every engine guarantee on data the engine has never seen.
+
+Scenarios in `scenarios/`: **FinBank** (`golden`, the demo), **FinBank after sync**
+(`golden_sync`), **MedCare hospital** (`medcare`, a different shape: six zones, a P1 clinical
+flow, a vendor VPN, and one *assumed* grant that makes every verdict "cannot be determined").
+Build them with `scripts/build_golden.py` / `scripts/build_medcare.py`; never hand-edit JSON.
 
 Regenerate the FinBank scenario after editing `scripts/build_golden.py`:
 ```bash

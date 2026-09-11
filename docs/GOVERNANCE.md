@@ -29,6 +29,7 @@ digital-twin/                     (repo: UDITGABAA/digital-twin-udit-gaba-, bran
 │
 ├── scripts/
 │   ├── build_golden.py           FinBank story -> scenarios/golden.json + golden_sync.json (never hand-edit the JSON)
+│   ├── build_medcare.py          MedCare hospital -> scenarios/medcare.json
 │   └── demo.ps1 · demo.sh        one command: install, test (stop if red), build, start both servers
 │
 ├── engine/                       ══ A: engine ══
@@ -51,13 +52,15 @@ digital-twin/                     (repo: UDITGABAA/digital-twin-udit-gaba-, bran
 │   └── app.py                    ══ D ══ FastAPI; router at "" and "/api" (incl. /trace); serves dashboard/dist at "/" if built
 │
 ├── scenarios/                    ══ D ══
-│   ├── golden.json               FinBank
-│   └── golden_sync.json          FinBank + contractor admin@jump-01 (the sync demo)
+│   ├── golden.json               FinBank (the demo)
+│   ├── golden_sync.json          FinBank + contractor admin@jump-01 (the sync demo)
+│   └── medcare.json              MedCare hospital - a different shape, proves nothing is tuned to FinBank
 │
 ├── tests/
 │   ├── test_fixture.py · test_invariants.py     A
 │   ├── test_rules.py · test_evaluate.py         B
-│   └── test_scenario.py                         D — pins every number in DEMO_SCRIPT.md
+│   ├── test_scenario.py                         D — pins every number in DEMO_SCRIPT.md
+│   └── test_fuzz.py                             A/B — 30 random twins, every invariant
 │
 └── dashboard/                    ══ C ══ Vite + React + TS + Tailwind; /api proxied to :8000
     └── src/

@@ -11,6 +11,7 @@ SCENARIO_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 
 
 class Scenario(BaseModel, frozen=True):
+    name: str = ""
     twin: Twin
     agents: tuple[Agent, ...]
     catalogue: tuple[Control, ...]      # proposable controls; twin.controls are the applied ones

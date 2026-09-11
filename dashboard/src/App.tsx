@@ -15,6 +15,7 @@ type Paths = { naive_count: number; count: number; routes: Route[] };
 export default function App() {
   const [twinId, setTwinId] = useState("current");
   const [scenario, setScenario] = useState("golden");
+  const [scenarios, setScenarios] = useState<{ id: string; name: string }[]>([]);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [agentId, setAgentId] = useState("external");
@@ -42,7 +43,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    (async () => { try { setAgents(await api.agents()); await refresh("current", agentId); } catch (e) { setError(String(e)); } })();
+    (async () => { try { setScenarios((await api.scenarios()).scenarios); setAgents(await api.agents()); await refresh("current", agentId); } catch (e) { setError(String(e)); } })();
   }, []); // eslint-disable-line
 
   useEffect(() => {
@@ -58,11 +59,15 @@ export default function App() {
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   const loadScenario = async (name: string, reset = false) => {
-    setPrev(!reset && baseline ? { p: baseline.p_success, risk: baseline.weighted_risk } : null);
-    await api.load(name);
+    const loaded = await api.load(name);
+    // the "since last twin" delta only means something when the new twin descends from the old one (a sync)
+    setPrev(!reset && baseline && loaded.parent_id === twinId ? { p: baseline.p_success, risk: baseline.weighted_risk } : null);
+    const ags = await api.agents();                       // agents belong to the scenario
+    const ag = ags.some((a) => a.id === agentId) ? agentId : ags[0]?.id ?? agentId;
+    setAgents(ags); setAgentId(ag);
     setScenario(name); setPicked([]); setVerdict(null); setRoute(null); setBlast(null); setTrials(null); setReplay(null);
     setHistory([]); setNotice(null);
-    await refresh("current", agentId);
+    await refresh("current", ag);
   };
 
   /* Adopting a change is the only action that alters the twin. Everything else is a what-if.
@@ -72,7 +77,7 @@ export default function App() {
     const label = verdict.control_ids.map((id) => catalogue.find((c) => c.id === id)?.name ?? id).join(" + ");
     setPrev(baseline ? { p: baseline.p_success, risk: baseline.weighted_risk } : null);
     const child = await api.clone(twinId, verdict.control_ids, label);
-    setHistory((h) => [...h, { id: twinId, label: h.length ? "previous twin" : scenario === "golden" ? "FinBank" : "FinBank after sync" }]);
+    setHistory((h) => [...h, { id: twinId, label: h.length ? "previous twin" : scenarios.find((s) => s.id === scenario)?.name ?? scenario }]);
     setPicked([]); setVerdict(null); setRoute(null); setTrials(null); setReplay(null); setBlast(null);
     setNotice(`Adopted: ${label}. The twin now includes it; the numbers above are the new baseline. Nothing was deployed anywhere real.`);
     await refresh(child.id, agentId);
@@ -115,8 +120,7 @@ export default function App() {
             <SegmentedTabs value={agentId} onChange={switchAgent} items={agents.map((a) => ({ id: a.id, title: a.name, hint: `starts in ${a.start_zones.join(", ")}` }))} />
             <select value={scenario} onChange={(e) => loadScenario(e.target.value)} aria-label="scenario"
               className="rounded-md border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink">
-              <option value="golden">FinBank</option>
-              <option value="golden_sync">FinBank after sync — contractor admin on jump-01</option>
+              {scenarios.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
             <button onClick={() => loadScenario("golden", true)} className="btn"><ArrowsClockwise weight="bold" />reset demo</button>
           </div>

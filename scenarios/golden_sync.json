@@ -319,6 +319,7 @@
    "name": "Decommission the HR SMB share"
   }
  ],
+ "name": "FinBank after sync (contractor admin on jump-01)",
  "twin": {
   "assets": [
    {

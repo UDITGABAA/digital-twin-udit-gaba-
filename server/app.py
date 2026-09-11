@@ -77,7 +77,13 @@ _load("golden")
 
 @api.get("/scenarios")
 def scenarios() -> dict:
-    return {"scenarios": list_scenarios(), "current": SCENARIO.twin.id}
+    items = []
+    for name in list_scenarios():
+        try:
+            items.append({"id": name, "name": load_scenario(name).name or name})
+        except Exception as e:                      # a broken file must not take the list down
+            items.append({"id": name, "name": f"{name} (invalid: {type(e).__name__})"})
+    return {"scenarios": items, "current": SCENARIO.twin.id, "current_scenario": SCENARIO.name}
 
 
 @api.post("/scenarios/{name}/load")

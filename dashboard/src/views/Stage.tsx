@@ -3,7 +3,11 @@ import { ReactFlow, Background, Handle, Position, MarkerType, type Edge as FEdge
 import { Crown, Database, Globe, HardDrives, Desktop, Cpu, CloudArrowUp } from "@phosphor-icons/react";
 import type { Asset, Blast, Graph, Route } from "../types";
 
-const ZONES = ["external", "dmz", "corp", "mgmt", "prod"];
+const ZONE_ORDER = ["external", "dmz", "clinical", "corp", "mgmt", "prod"];
+const zonesOf = (assets: Asset[]) => {
+  const seen = Array.from(new Set(assets.map((a) => a.zone)));
+  return [...ZONE_ORDER.filter((z) => seen.includes(z)), ...seen.filter((z) => !ZONE_ORDER.includes(z))];
+};
 const NODE_W = 204;
 const STAGE_H = 600;
 
@@ -62,8 +66,9 @@ export function Stage({ graph, route, blast, replay, startZones, onSelectAsset }
     return () => ro.disconnect();
   }, []);
 
-  const { nodes, edges } = useMemo(() => {
-    if (!graph) return { nodes: [] as FNode[], edges: [] as FEdge[] };
+  const { nodes, edges, zones } = useMemo(() => {
+    if (!graph) return { nodes: [] as FNode[], edges: [] as FEdge[], zones: [] as string[] };
+    const ZONES = zonesOf(graph.assets);
     const laneW = width / ZONES.length;
     const counts: Record<string, number> = {};
     graph.assets.forEach((a) => { counts[a.zone] = (counts[a.zone] ?? 0) + 1; });
@@ -112,14 +117,14 @@ export function Stage({ graph, route, blast, replay, startZones, onSelectAsset }
       labelStyle: { fill: "var(--color-blue-ink)", fontSize: 9.5 }, labelBgStyle: { fill: "var(--color-surface)", fillOpacity: 0.95 },
       style: { stroke: "var(--color-blue-ink)", strokeWidth: 1.3, strokeDasharray: "5 4", opacity: focus ? 0.25 : 0.7 },
     }));
-    return { nodes, edges };
+    return { nodes, edges, zones: ZONES };
   }, [graph, route, blast, replay, startZones, width]);
 
   return (
     <section ref={box} className="card relative overflow-hidden" style={{ height: STAGE_H }}>
       <div className="pointer-events-none absolute inset-0 z-10">
-        {ZONES.map((z, i) => (
-          <div key={z} className="lane" style={{ left: `${(i / ZONES.length) * 100}%`, width: `${100 / ZONES.length}%` }}>
+        {zones.map((z, i) => (
+          <div key={z} className="lane" style={{ left: `${(i / zones.length) * 100}%`, width: `${100 / zones.length}%` }}>
             <span className="lane-label">{z}</span>
           </div>
         ))}

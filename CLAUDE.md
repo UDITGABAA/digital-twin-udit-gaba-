@@ -484,10 +484,15 @@ profiles (ship one) → matrix view → lineage view.
    Every grant, flow and edge carries evidence; we compute confidence from the elements that
    decided the verdict and lower it — or say 'cannot be determined' — when crucial data is
    missing."** Never "accuracy is an ingestion problem".
-4. *"Why does effort go down for some controls?"* → "Degrade the hard route and the agent stops
+4. *"Does it only work on your demo data?"* → switch the scenario dropdown to **MedCare
+   hospital** live: different zones, identities, flows, adversaries. Every verdict there is
+   REVIEW — *cannot be determined* — because one privilege grant is merely assumed and it sits
+   on a top-5 route. "The model would rather say 'verify this' than 'deploy'." Then:
+   `tests/test_fuzz.py` runs 30 random twins through every invariant.
+5. *"Why does effort go down for some controls?"* → "Degrade the hard route and the agent stops
    wasting attempts on it, so the surviving successes are cheaper. That is why *harden the jump
    host alone* is REVIEW, not DEPLOY — path count would have called it a 62% win."
-5. *"Isn't a random walk just noise, not adaptation?"* → "It is not a random walk. The agent
+6. *"Isn't a random walk just noise, not adaptation?"* → "It is not a random walk. The agent
    scores the feasible routes of the twin it faces and selects among the best five. After a
    control, the feasible set changes and it selects a different route. We show you which."
 
