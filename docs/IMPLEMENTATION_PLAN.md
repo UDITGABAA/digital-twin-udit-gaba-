@@ -1,502 +1,450 @@
-# Security Digital Twin Implementation Plan v2.1 — Security Change Sandbox
+# Implementation plan v2.1 — phased, with verifiable exits
 
-**Problem Statement:** CyberSecurity & Defence System (PS #13) — Security Digital Twin for Threat Vector Assessment  
-**Core Concept:** A Security Change Sandbox that joins security risk reduction with business service flow breakage to answer the Change Advisory Board question: *What can I deploy safely, within budget, and how sure are we?*
+Six phases. Each has an **exit criterion that is a command someone runs**, not a feeling.
+Nobody advances a phase on "it looks done."
+
+Hours are from kickoff and assume ~24 hours of real build time. If the event is 36, the
+slack goes into Phase 5, not into new features.
+
+This plan supersedes v1. What changed and why is in §A at the end. The contract it builds
+against is `CLAUDE.md` §5; the function signatures between tracks are `docs/INTERFACES.md`.
 
 ---
 
-## 1. System Architecture & Dual-Algorithm Design
+## Phase 0 — Base workflow (hour 0 → 1.5) · ALL FOUR TOGETHER
 
-The system rejects the naive assumption that attack path existence equals compromise risk. Instead, it evaluates change across two complementary algorithms and a business dependency graph:
+Nobody writes feature code. This ninety minutes is what makes the next twenty parallel.
+Everything below is done on one screen, everyone watching, and pushed before anyone splits.
 
+**Do, in this order:**
+
+1. Branch `UDIT` already exists on `techie-rahul/digital-twin` with the repo skeleton
+   (`engine/ rules/ scenarios/ server/ tests/ dashboard/`). Everyone pulls it. Protect it.
+   Add `.github/workflows/ci.yml` (`pip install -r requirements.txt && pytest`). The `.gitignore`
+   is already real.
+2. Read the old code together — it lives on branch `aryan`: `engine/models.py`,
+   `engine/twin.py` (`DigitalTwin`), `engine/simulator.py` (`AdversaryAgent`),
+   `server/app.py`, `scenarios/enterprise_cloud.json`, `dashboard/index.html`. The
+   migration table (§Migration below) already says what happens to each. Ten minutes, to
+   agree, not to re-derive.
+3. Write `engine/models.py` — copy from `CLAUDE.md` §5. Argue about it now, never
+   later. Add the canonical `twin_hash()` next to it.
+4. Write `rules/techniques.yaml` — the ten entries, each with its ATT&CK ID and
+   channel.
+5. Write `docs/INTERFACES.md` — the four cross-track signatures. This file is the contract
+   between AI sessions (GOVERNANCE §9).
+6. Write `scenarios/golden.json` **v0** — the FinBank assets, identities,
+   grants, edges and flows from §Golden below. **No controls yet.** Every track now has real
+   data from hour 1.5.
+7. `scripts/gen_types.py` → `dashboard/src/types.ts` (Pydantic JSON schema →
+   `json-schema-to-typescript`).
+8. `docs/STATUS.md` with the empty gate table.
+
+**Exit (Gate G0) — all four must pass on their own machine:**
+
+```bash
+python -c "from engine.models import Twin, CompiledEdge, FlowSelector; print('ok')"
+pytest --collect-only          # collects, zero errors
+cd dashboard && npm run dev     # serves
 ```
-                          ┌────────────────────────┐
-                          │   Scenario Definition  │
-                          │  (Assets, Edges, Flows)│
-                          └───────────┬────────────┘
-                                      │
-                                      ▼
-                          ┌────────────────────────┐
-                          │  Digital Twin Snapshot │
-                          │  (Immutable, Hashable) │
-                          └─────┬────────────┬─────┘
-                                │            │
-            ┌───────────────────┘            └───────────────────┐
-            ▼                                                    ▼
-┌───────────────────────┐                            ┌───────────────────────┐
-│ Algorithm A: Search   │                            │  Algorithm B: Walk    │
-│ Complete State Search │                            │  Sampled Agent Walk   │
-│ (node, capabilities)  │                            │  Monte Carlo (N=1000) │
-│ Headline Path Count   │                            │  Attacker Cost Dist.  │
-└───────────┬───────────┘                            └───────────┬───────────┘
-            │                                                    │
-            └───────────────────┬────────────────────────────────┘
-                                │
-                                ▼
-                    ┌────────────────────────┐
-                    │    evaluate_change()   │
-                    │   - Path Reduction %   │
-                    │   - Attacker Cost %    │
-                    │   - Substituted Paths  │
-                    │   - Broken Flows (>=4) │
-                    └───────────┬────────────┘
-                                │
-                                ▼
-                    ┌────────────────────────┐
-                    │      ChangeVerdict     │
-                    │ deploy | blocked | rev │
-                    └────────────────────────┘
-```
 
-### The Two Non-Negotiable Algorithms
-1. **Algorithm A (Complete Path Search — `core/search.py`):**
-   - Runs once per twin snapshot, cached.
-   - State space: `(node, frozenset(capabilities_held))`.
-   - Bounded by `max_depth=8`, `max_states=5000`.
-   - Produces exact path inventories, choke points, and the required `naive_path_reduction_pct`.
-2. **Algorithm B (Sampled Agent Walk — `core/walk.py`):**
-   - Used for all Monte Carlo statistics and adaptive simulation.
-   - Attacker makes local probabilistic choices based on held capabilities and noise budgets.
-   - Produces `honest_cost_increase_pct`, empirical time-to-compromise, and attacker substitution routes.
-   - **Rule:** Never execute Algorithm A inside the Algorithm B sampling loop.
+**Trap:** designing the data model before deciding the demo story. The story tells you
+which fields you actually need. `FlowSelector` has `src_assets` and `identity_ids` because
+the demo must distinguish an allowed payroll workload from an attacker on an HR workstation
+holding payroll credentials — not because selectors are conceptually nice.
 
 ---
 
-## 2. Team Ownership & Tracks
+## Phase 1 — Walking skeleton (hour 1.5 → 4) · PARALLEL
 
-To prevent merge conflicts during intensive parallel implementation, work is partitioned by directory:
+End-to-end pipe with fake logic inside. **Do not skip this phase.** Proving the frontend
+can call the real backend at hour 4 turns integration from an hour-18 catastrophe into an
+hour-4 annoyance.
 
-| Track | Lead / Role | Owned Directory | Primary Focus |
-|---|---|---|---|
-| **Track A** | Engine Owner | `backend/core/` | Core twin data structures, immutability, hashing, Algorithm A (search), Algorithm B (walk), Results/Delta types. |
-| **Track B** | Rules & Decisions | `backend/rules/` | MITRE ATT&CK technique catalog, YAML loader, `evaluate_change`, broken-flow detector, constrained optimizer. |
-| **Track C** | Frontend Lead | `frontend/` | React 18, TypeScript, Tailwind CSS, React Flow graph view, Recharts cost histograms, change advisory console. |
-| **Track D** | Integration & Data | `backend/api/`, `backend/data/`, `docs/` | FastAPI REST endpoints, caching, synthetic data generator, FinBank golden scenario, demo script. |
-
-**Shared Contract Files (Group consensus protocol required to edit):**
-- `CLAUDE.md`
-- `backend/core/models.py`
-- `backend/rules/techniques.yaml`
-
----
-
-## 3. Development Gates (G0 – G5)
-
-| Gate | Target Milestone | Verification Requirement |
+| Track | Builds | Verifies with |
 |---|---|---|
-| **G0 — Contract Freeze** | Phase 0 | `models.py` frozen on `main`, `techniques.yaml` validated, `frontend/src/types.ts` generated. |
-| **G1 — Walking Skeleton** | Phase 1 & 10 | `/simulate` returns hardcoded `Result` from FastAPI; frontend fetches and renders live API data. |
-| **G2 — Engine Correctness** | Phase 3 & 4 | `tests/test_fixture.py` and `tests/test_invariants.py` green on `main`. |
-| **G3 — The Differentiator** | Phase 6 | `evaluate_change` returns security metrics AND identifies non-empty `broken_flows` with `recommendation: "blocked"`. |
-| **G4 — Feature Freeze** | Phase 12 | Zero new feature code merged; all PRs closed; full test suite passing. |
-| **G5 — Rehearsal & Pitch** | Phase 13 | Full end-to-end demo executed cleanly under 4 minutes; hot-standby system prepared. |
+| **A** | Replace `DigitalTwin`/`find_all_attack_paths` with an `engine/search.py` skeleton reading `CompiledEdge` (no logic yet). `engine/twin.py` — `clone()`, `twin_hash()`. `engine/results.py` — `Result`, `Delta`, `ChangeVerdict` as frozen types with hardcoded values. Delete the old engine files in the same PR. | `python -c "from engine.results import Result"`; old `engine/` gone |
+| **B** | Write `rules/loader.py` (YAML → technique table, validated: every technique has an ATT&CK ID, only allowed placeholders). `rules/compile.py` skeleton with the `matches(selector, channel)` function and its test. `rules/_stub_policy.py`. | `pytest tests/test_rules.py -k matches` |
+| **C** | Vite + React + TS + Tailwind scaffold. `api/mocks.ts` with one fake `Result` and one fake `ChangeVerdict`. **The decision card**, rendering the mock verdict exactly as `CLAUDE.md` §2 shows it. | `npm run dev` shows the card |
+| **D** | FastAPI app, `/twin/{id}` and `/simulate` returning the hardcoded `Result` from `server/stubs.py`. CORS for Vite. `golden.json` v1 — adds the eight controls from §Golden. | `curl.exe -X POST localhost:8000/simulate ...` |
 
----
+**Exit (Gate G1):**
 
-## 4. FinBank Golden Scenario
-
-The primary demonstration topology models an enterprise banking environment with high-value transactional assets, identities, and mission-critical business dependencies:
-
-### 1. Assets (9 Core Entities)
-- `asset-web-portal`: Online Banking Web Portal (DMZ, customer facing)
-- `asset-api-gateway`: Core Banking API Gateway (Application Zone)
-- `asset-auth-service`: OAuth2 / OIDC Token Issuer (Application Zone)
-- `asset-core-banking-db`: Production Financial Ledger Database (Data Secure Zone, Crown Jewel)
-- `asset-payment-processor`: SWIFT / ACH Clearing Engine (Application Zone)
-- `asset-admin-jumpbox`: Privileged Bastion Jump Host (Management Zone)
-- `asset-corp-workstation`: Corporate Financial Analyst Workstation (Corporate LAN)
-- `asset-backup-vault`: Disaster Recovery Cloud Storage Vault (Cold Storage Zone, Crown Jewel)
-- `asset-siem-server`: Central Security Log & Audit Collector (Management Zone)
-
-### 2. Identities (4 Personas)
-- `id-user-customer`: Retail Banking Customer
-- `id-user-analyst`: Financial Operations Analyst
-- `id-user-admin`: Lead Cloud Infrastructure Administrator (Tier-0)
-- `id-svc-payment-app`: Core Payment Processing Service Account
-
-### 3. Business Service Flows (`ServiceFlow` — The Differentiator)
-Legitimate operational traffic that must remain uninterrupted:
-- `flow-web-api`: Customer portal to API Gateway (Criticality: 4)
-- `flow-api-auth`: API Gateway token validation to Auth Service (Criticality: 5)
-- `flow-pay-db`: Payment Processor transaction ledger commits to Core Banking DB (Criticality: 5 — **Never Break**)
-- `flow-svc-db`: Backend batch transaction verification to Core Banking DB (Criticality: 4)
-- `flow-jump-vault`: Nightly backup snapshot archival from Jumpbox to Backup Vault (Criticality: 3)
-
-### 4. Golden Change Narrative for Demonstration
-1. **The Proposed Change:** Enforce strict cross-subnet network segmentation blocking all direct non-whitelisted traffic between Application Zone and Data Secure Zone.
-2. **Naive Metric:** Attack paths from `corp-workstation` to `core-banking-db` drop by 80% (`naive_path_reduction_pct = 80%`). A standard security tool says: *"Deploy immediately."*
-3. **The Sandbox Verdict:** The change severs `flow-pay-db` (Criticality 5), halting payment settlement. `evaluate_change()` flags `broken_flows: [flow-pay-db]`, sets `recommendation: "blocked"`, and discovers attacker route substitution via the admin jumpbox.
-4. **Constrained Optimization:** The optimizer recommends deploying MFA on the Jumpbox + EDR on Workstations + Database Column Encryption. Security increases by 65%, cost is within budget, and zero business service flows are broken (`recommendation: "deploy"`).
-
----
-
-## 5. Existing Engine Migration Strategy
-
-The Phase 1 & 2 prototype codebase (`engine/`, `scenarios/`) proved graph ingestion, deterministic traversal, and basic control toggling. The migration into v2.1 structure proceeds as follows:
-
-```
-LEGACY STRUCTURE                              TARGET v2.1 STRUCTURE
-engine/models.py         ──────────────▶      backend/core/models.py (Frozen, Immutable Tuples)
-engine/twin.py           ──────────────▶      backend/core/twin.py (Lineage, Hashing, Cloning)
-engine/attacker.py       ──────────────▶      backend/core/walk.py & backend/core/search.py
-engine/rules.py          ──────────────▶      backend/rules/loader.py & evaluate.py
-engine/attack_path.py    ──────────────▶      backend/core/search.py (Algorithm A)
-scenarios/scenario.json  ──────────────▶      backend/data/scenarios/golden.json
-tests/test_*.py          ──────────────▶      backend/tests/
+```bash
+curl.exe -X POST localhost:8000/simulate -H "Content-Type: application/json" -d "{\"twin_id\":\"golden\",\"agent_id\":\"external\",\"n\":100,\"seed\":1}"
+# returns a valid Result
 ```
 
-### Migration Principles
-1. **Preserve Validated Logic:** Existing graph semantics and node resolution helpers migrate intact.
-2. **Immutable Guarantee:** Replace `list` and `set` fields in models with `tuple` and `frozenset` to ensure hashability and zero mutation leaks.
-3. **Clean Decoupling:** Decouple the rule dictionary into `backend/rules/techniques.yaml` mapped to MITRE ATT&CK IDs.
-4. **Zero Phase 1/2 Regressions:** Ensure all 30 existing test cases continue passing against the migrated backend modules.
+and the decision card displays those numbers **fetched from the real API**, mocks switched
+off. Demo it to each other, screen shared. If the numbers on screen came from `mocks.ts`,
+the gate has not passed.
 
 ---
 
-## 6. Phase-by-Phase Implementation Plan
+## Phase 2 — Engine correctness (hour 4 → 9) · A and B in parallel, both critical
+
+The only phase where wrong code is invisible. Everything downstream inherits its errors.
+
+**A — in this exact order:**
+
+1. **`tests/test_fixture.py` FIRST, before `search.py` has logic.** Hand-build a 6-node
+   graph of `CompiledEdge` tuples on paper where every valid path is known by inspection,
+   including one path reachable *only* after collecting a credential two hops earlier
+   (`cred_dump` on node 2 grants `creds:x`; the edge into node 5 requires `creds:x`).
+   Assert exact path counts and the exact path list. Fixture edges are hand-built — A does
+   **not** wait for `compile.py`.
+2. `engine/search.py` — complete path search. State is `(node, frozenset(caps))`. Dedupe on
+   the **full state**, not the node. DFS simple paths to `agent.target`. Hard caps
+   `max_depth=8`, `max_paths=5000`, raise `SearchBudgetExceeded` rather than hang. Loop
+   until the fixture is green.
+3. `engine/walk.py` — `route_policy(inventory, agent)` first (deterministic, no RNG, unit-test
+   it: top-5, noise filter, `p_select` sums to 1, skill=1 concentrates on the best). Then
+   `trial(rng)` and `simulate(twin, agent, n, seed)`. `random.Random(seed)`; pre-draw
+   uniforms in bulk.
+4. `engine/results.py` — real `Result` from trial records, `diff()` producing `Delta`
+   including `substituted_paths` and the `route_eliminated` / `None` handling.
+5. `tests/test_invariants.py` — adding a control never increases `p_success`; `clone`
+   never mutates its input (compare `twin_hash` before/after); identical seed gives
+   identical `Result`.
+
+**B — in this exact order:**
+
+1. `rules/compile.py` complete: for each `Edge`, look up **its one declared technique**,
+   expand `creds:who` over grants on `dst` (one `CompiledEdge` per candidate identity;
+   `admin:dst` added when the grant is `admin`), expand `creds:sessions@src`, then apply
+   every control impact through `matches()` (`naive=True` drops, else degrades).
+2. `tests/test_rules.py`:
+   - **no invented transitions**: `{(e.src, e.dst, e.technique) for e in compiled} ⊆ {… for
+     e in twin.edges}` for every twin, and `==` when `controls=()`;
+   - scoped segmentation: `ws-hr → prod-db` as `svc.payroll` is dropped, `backup-01 →
+     prod-db` as `svc.backup` survives, flow F1 not broken, F2 not broken;
+   - `mfa_humans` degrades a `u.dev` edge, leaves a `svc.backup` edge, breaks no flow;
+   - `mfa_all` breaks F1, F2, F4.
+3. Start `rules/evaluate.py` against `_stub_policy.py` — broken-flow detection and the
+   verdict rules can be finished before A's `route_policy` merges.
+
+**C:** React Flow graph view of the golden twin (assets coloured by zone, crown jewel
+marked), and the route animation, against mocks.
+**D:** `server/cache.py` keyed on `(twin_hash, agent_id, seed, n)`; `/twin/{id}/clone`;
+`/lineage`; `golden_sync.json` (golden + contractor `admin@jump-01`).
+
+**Exit (Gate G2):**
+
+```bash
+pytest tests/test_fixture.py tests/test_invariants.py tests/test_rules.py -v   # all green on UDIT
+```
+
+**Traps.** Running the state-space search inside the Monte Carlo loop — an order of
+magnitude slower and a different attacker model; `route_policy` is called once per
+`simulate`, not once per trial. Deduping on node rather than on `(node, capabilities)` —
+silently drops valid paths. Expanding `Edge × every technique` in `compile.py` — invents
+attack paths the twin never declared; the subset test exists to catch exactly this. Letting
+an AI session generate `search.py` before the fixture test exists — it will produce
+confident, plausible, wrong code and you will not notice for fifteen hours.
 
 ---
 
-### Phase 0 — Contract and Repository Freeze
-- **Objective:** Establish frozen data contracts, MITRE technique schemas, directory structure, and shared repositories before writing any feature code.
-- **Tasks:**
-  1. Freeze `backend/core/models.py` with immutable, hashable models (`Asset`, `Identity`, `Edge`, `ServiceFlow`, `Control`, `Agent`, `Twin`).
-  2. Draft initial `backend/rules/techniques.yaml` with MITRE ATT&CK IDs (e.g., T1021.001, T1078, T1059).
-  3. Validate contract types and generate initial TypeScript definitions (`frontend/src/types.ts`).
-  4. Ensure directory ownership rules and pre-commit linting are in place.
-- **Files Involved:**
-  - `backend/core/models.py`
-  - `backend/rules/techniques.yaml`
-  - `frontend/src/types.ts`
-  - `CLAUDE.md`, `docs/GOVERNANCE.md`
-- **Deliverables:** Validated, frozen Pydantic models and YAML technique catalog.
-- **Verification / Tests:**
-  ```bash
-  python -c "from backend.core.models import Twin; print(Twin.model_json_schema())"
-  ```
-- **Exit Criteria (Gate G0):** Models schema exports cleanly; `frontend/src/types.ts` matches Python models; all team members rebase on `main`.
-- **Dependencies:** None.
-- **Responsibilities:** All tracks (A, B, C, D) participate and agree.
+## Phase 3 — The differentiator (hour 9 → 14) · B leads
+
+Where the product stops being a clone of BloodHound.
+
+**B — `rules/evaluate.py` → `evaluate_change(twin, control_ids, agent_ids, *, seed)`:**
+
+1. `clone` the twin with the controls applied.
+2. `compile` before and after, twice each: `naive=True` for the path count, `naive=False`
+   for the simulation.
+3. `search` both; `simulate` both (`n=1000`, fixed seed).
+4. `naive_path_reduction_pct` (**required by the brief — ship it**).
+5. `effort_increase_pct` from `mean_effort` before/after; `None` and
+   `route_eliminated=True` when `after` has fewer than 20 successful trials.
+6. `substituted_paths` — routes in `after.routes` absent from `before.routes`.
+7. **`broken_flows`** — every `ServiceFlow` whose channel is matched by some impact's
+   `deny` with `breaks_flows=True` and by none of that impact's `exceptions`. Same
+   `matches()` as the attack side. ~30 lines, and it is the entire differentiator.
+8. **Confidence** — decisive elements are the grants, flows and edges in `broken_flows` and
+   on every top-K route before and after. `score = mean(weight)`; High/Medium/Low at
+   0.85/0.6; any `assumed` → `undetermined=True`. `unknowns` in words.
+9. **Verdict** — the rules in `CLAUDE.md` §7, verbatim. `reasons` lists which rule fired.
+10. `alternatives` — from the optimiser's precomputed sweep (Phase 4); until then, the best
+    single control that breaks no crit ≥ 4 flow.
+11. `tests/test_evaluate.py` — one test per verdict rule, the `None`/`route_eliminated`
+    case yields DEPLOY not REVIEW, an `assumed` grant on the decisive route yields
+    `undetermined` and REVIEW.
+
+**A:** performance — `simulate(n=1000)` under one second on golden (bulk RNG, no Pydantic
+construction inside the loop). `engine/blast.py` — `search` seeded with
+`{session:X, admin:X} ∪ creds of sessions on X`; `nx.descendants` returned alongside,
+labelled "upper bound ignoring credentials".
+**C:** the decision card wired to `/evaluate-change`; the **overlaid before/after
+attacker-effort histograms** in Recharts — that chart is the thesis made visible, give it
+real design time; the substituted route animated on the graph.
+**D:** startup precompute of golden × every agent × every single control; `/evaluate-change`
+and `/blast-radius` routes; `stubs.py` deleted.
+
+**Exit (Gate G3):**
+
+```bash
+curl.exe -X POST localhost:8000/evaluate-change -H "Content-Type: application/json" -d "{\"twin_id\":\"golden\",\"control_ids\":[\"seg_prod_db_full\"],\"agent_ids\":[\"external\"],\"seed\":1}"
+```
+
+returns both metrics, `broken_flows` containing F1, `confidence.level == "Medium"` with
+`"svc.backup admin on prod-db — inferred"` in `unknowns`, `recommendation == "blocked"`,
+non-empty `alternatives` — and the card renders all of it. **If full segmentation does not
+break F1, or no substituted route appears, the scenario is wrong, not the code.** Fix the
+data.
 
 ---
 
-### Phase 1 — Existing Engine Migration
-- **Objective:** Migrate existing prototype logic (`engine/`, `scenarios/scenario.json`) into the v2.1 modular package architecture (`backend/core/`, `backend/data/`) without breaking behavior.
-- **Tasks:**
-  1. Migrate FinBank entities and relationships to `backend/data/scenarios/golden.json` adding `flows` for business dependencies.
-  2. Refactor `engine/twin.py` into `backend/core/twin.py` supporting deterministic content hashing (`twin.hash()`) and immutable `clone()`.
-  3. Port `AttackerState` and traversal rule models into `backend/core/` supporting frozen state tuples.
-  4. Verify existing 30 test assertions against the new directory structure.
-- **Files Involved:**
-  - `backend/core/twin.py`
-  - `backend/core/models.py`
-  - `backend/data/scenarios/golden.json`
-  - `backend/tests/test_migration.py`
-- **Deliverables:** Migrated core package with deterministic snapshot cloning and golden scenario.
-- **Verification / Tests:**
-  ```bash
-  pytest backend/tests/test_migration.py -v
-  ```
-- **Exit Criteria:** All 30 existing test cases pass against `backend/core/`; twin cloning produces independent hashable instances.
-- **Dependencies:** Phase 0.
-- **Responsibilities:** Track A (Lead) assisted by Track D.
+## Phase 4 — Optimiser, matrix, sync (hour 14 → 18)
+
+**B — `rules/optimize.py`:** enumerate every subset of the ≤10-control catalogue within
+budget. For each: `clone → compile → search → risk = Σ_agents target_crit × Σ p_select ×
+p_route` via `route_policy` — deterministic, no Monte Carlo — and `broken_flows`. Discard
+any subset breaking a flow with `criticality >= 4`. Best = maximum risk reduction. No
+pruning; 1024 evaluations of a ~10-asset twin is seconds, and it runs at startup. Also
+return the naive "top-N by paths eliminated within budget" portfolio so the demo can
+contrast them. Wire `alternatives` in `evaluate_change` to this table.
+**A:** `route_policy` and `simulate` exposed for `test_scenario.py`'s agreement check;
+help D with performance if precompute is slow.
+**C:** optimiser view (constrained vs naive, side by side), matrix heatmap, blast-radius
+view, lineage tree, "load scenario" dropdown, **reset button**.
+**D:** `/optimize`, `/matrix` (loops `evaluate_change` over controls × agents), sync demo
+(load `golden_sync.json` → risk goes **up**, the new grant highlighted), pre-generated
+route narration in `narration.json`, `tests/test_scenario.py` first draft.
+
+**Exit (Gate G4 — FEATURE FREEZE, hour 18):**
+
+```bash
+pytest                                  # everything green
+curl.exe localhost:8000/optimize?twin_id=golden^&budget=12   # constrained != naive, constrained breaks no P1 flow
+git log origin/UDIT -1               # last feature merge
+```
+
+Everything merged. **No new features after this line, ever.** Every hackathon team breaks
+its demo in the last three hours by adding one more thing.
 
 ---
 
-### Phase 2 — Rule Loader and Compiler
-- **Objective:** Parse and compile declarative MITRE ATT&CK techniques from YAML into an efficient in-memory lookup table.
-- **Tasks:**
-  1. Implement `backend/rules/loader.py` to read `techniques.yaml` and validate against Pydantic schema.
-  2. Implement technique compiler indexing prerequisite capabilities, granted privileges, costs, success rates, and blocking controls.
-  3. Add ATT&CK matrix validation ensuring each technique maps to a recognized tactic ID.
-  4. Write unit tests asserting proper error handling on malformed technique definitions.
-- **Files Involved:**
-  - `backend/rules/techniques.yaml`
-  - `backend/rules/loader.py`
-  - `backend/tests/test_rules_loader.py`
-- **Deliverables:** Validated technique catalog containing at least 12 realistic enterprise techniques.
-- **Verification / Tests:**
-  ```bash
-  pytest backend/tests/test_rules_loader.py -v
-  ```
-- **Exit Criteria:** Techniques load without schema errors; indexed table accessible by technique ID in $O(1)$ time.
-- **Dependencies:** Phase 0.
-- **Responsibilities:** Track B.
+## Phase 5 — Hardening and rehearsal (hour 18 → 24) · ALL FOUR
+
+Bugs and polish only. The product is done; now make it survivable.
+
+- **Hour 18–20:** bug bash. Everyone clicks everything, on a fresh clone. Fix breaks,
+  add nothing.
+- **Hour 20–21:** `test_scenario.py` pinned to the exact numbers in `docs/DEMO_SCRIPT.md`,
+  plus the assertion that optimiser risk and simulated `p_success × crit` agree within
+  0.05. If a late fix shifts a headline number, you find out here rather than on stage.
+- **Hour 21–22 (Gate G5):** full rehearsal, timed, under four minutes. Twice. A and B
+  rehearse the four answers in `CLAUDE.md` §12 out loud.
+- **Hour 22–23:** slides. Prior-art table from `CLAUDE.md` §3 goes on slide two — naming
+  MAL and Azure yourself is what makes the narrow claim survive Q&A.
+- **Hour 23–24:** screen-record a clean run as video fallback. Second laptop running the
+  same build. Sleep if anyone can.
 
 ---
 
-### Phase 3 — Stateful Attack Path Search (Algorithm A)
-- **Objective:** Implement complete state-space path search (Algorithm A) exploring reachable attack paths with cycle prevention and capability requirements.
-- **Tasks:**
-  1. Write `tests/test_fixture.py` FIRST with a hand-calculated 6-node graph with known paths.
-  2. Implement `backend/core/search.py` with state `(node, frozenset(capabilities_held))`.
-  3. Enforce strict bounded exploration (`max_depth=8`, `max_states=5000`) with explicit truncation exceptions.
-  4. Compute headline metrics: critical path count, shortest hop distance, choke-point edge frequencies.
-- **Files Involved:**
-  - `backend/core/search.py`
-  - `backend/tests/test_fixture.py`
-  - `backend/tests/test_search.py`
-- **Deliverables:** Complete deterministic attack path discovery engine.
-- **Verification / Tests:**
-  ```bash
-  pytest backend/tests/test_fixture.py backend/tests/test_search.py -v
-  ```
-- **Exit Criteria (Gate G2 Part 1):** `test_fixture.py` passes with exact asserted path counts; zero infinite loops on cyclic topologies.
-- **Dependencies:** Phase 1, Phase 2.
-- **Responsibilities:** Track A.
+## The four tracks — who builds what, in what order, and how they know it works
+
+| | **A — engine** | **B — rules & decisions** | **C — frontend** | **D — integration & demo** |
+|---|---|---|---|---|
+| Owns | `engine/`, `tests/test_fixture.py`, `tests/test_invariants.py` | `rules/`, `tests/test_rules.py`, `tests/test_evaluate.py` | `dashboard/`, `scripts/gen_types.py` | `server/`, `scenarios/`, `docs/`, `README.md`, `tests/test_scenario.py` |
+| First job (P1) | Replace `DigitalTwin` with `engine/search.py` skeleton over `CompiledEdge`; `twin.py`; hardcoded `results.py`; delete old `engine/*` | `loader.py`; `matches()` + test; `_stub_policy.py`; replace `AdversaryAgent._infer_attack_technique` with the YAML | Scaffold; `mocks.ts`; **decision card** | FastAPI + `stubs.py`; CORS; `golden.json` v1 |
+| Then, in order | fixture → `search.py` → `route_policy` → `walk.py` → `results.py` → invariants → perf → `blast.py` | `compile.py` → no-invented-transition test → `evaluate.py` (flows, confidence, verdict) → `test_evaluate.py` → `optimize.py` | graph + route animation → card on real API → effort histograms → optimiser / matrix / blast / lineage → dropdown + reset | `cache.py` → clone/lineage → precompute → evaluate/blast routes → optimize/matrix → sync → narration → `test_scenario.py` → run sheet |
+| Never blocked because | fixture edges are hand-built `CompiledEdge`s | tests build a 4-node twin inline; `_stub_policy.py` until A merges | `mocks.ts` mirrors `types.ts`; flips at G1 | `stubs.py` until A and B merge |
+| Verifies with | `pytest tests/test_fixture.py tests/test_invariants.py`; `simulate(n=1000)` < 1 s | `pytest tests/test_rules.py tests/test_evaluate.py` | `npm run dev` with mocks off shows API numbers; `npm run build` clean | `curl.exe` every endpoint; `pytest tests/test_scenario.py`; timed run < 4 min |
+| Reviews | B's PRs | A's PRs | D's PRs | C's PRs; release manager; calls gates |
+| On stage | algorithm questions | breakage / confidence / verdict questions | — | drives the demo; prior art |
+
+Critical path:
+
+```
+models.py ──▶ compile.py ──▶ search.py ──▶ route_policy/walk.py ──▶ evaluate_change ──▶ optimize
+  (P0)          (P2, B)        (P2, A)           (P2, A)                (P3, B)          (P4, B)
+```
+
+A and B are both on it and are decoupled in P2 by the hand-built fixture and the stub
+policy. Everything else — frontend, API, cache, matrix, blast radius, sync — is off the
+critical path and can slip without killing the demo. **If A or B is blocked, the project is
+blocked**, and that is the one situation where everyone else drops their track and helps.
 
 ---
 
-### Phase 4 — Agent Simulation (Algorithm B)
-- **Objective:** Implement sampled Monte Carlo agent random walk simulation (Algorithm B) modeling adaptive adversaries.
-- **Tasks:**
-  1. Implement `backend/core/walk.py` with agent profiles (`Agent`: skill, noise budget, objective).
-  2. Implement local edge scoring and probabilistic selection based on technique cost and control efficacy.
-  3. Support seeded RNG for 100% deterministic test replayability.
-  4. Optimize inner loop to execute $N=1000$ walks in under 1 second.
-- **Files Involved:**
-  - `backend/core/walk.py`
-  - `backend/tests/test_walk.py`
-  - `backend/tests/test_invariants.py`
-- **Deliverables:** High-performance agent random walk simulation engine.
-- **Verification / Tests:**
-  ```bash
-  pytest backend/tests/test_walk.py backend/tests/test_invariants.py -v
-  ```
-- **Exit Criteria (Gate G2 Part 2):** 1000 trials complete in $<1.0\text{s}$; identical seeds produce identical distributions; invariant tests pass.
-- **Dependencies:** Phase 1, Phase 2.
-- **Responsibilities:** Track A.
+## Golden scenario — "FinBank"
+
+Design the story before the data. Every demo beat below has a route that makes it true.
+
+**Assets** — `internet` (external) · `web-dmz` (dmz, 3) · `ws-dev`, `ws-hr` (corp, 2) ·
+`fileshare` (corp, share, 2) · `ci-runner` (corp, 3) · `jump-01` (mgmt, 3) · `payroll-api`
+(prod, 4) · `backup-01` (prod, 3) · **`prod-db`** (prod, database, 5, crown jewel).
+
+**Identities and grants**
+
+| Identity | kind | grants (capability@asset, evidence) |
+|---|---|---|
+| `u.dev` | user | session@ws-dev · login@jump-01 · login@ci-runner (**inferred**) |
+| `u.hr` | user | session@ws-hr · login@fileshare |
+| `adm.ops` | admin | session@jump-01 (**observed**) · admin@prod-db · admin@backup-01 |
+| `svc.payroll` | service_account | session@payroll-api · login@prod-db |
+| `svc.backup` | service_account | session@backup-01 · **admin@prod-db (inferred)** ← the named unknown |
+| `svc.ci` | service_account | session@ci-runner · login@backup-01 |
+
+**Attack routes designed in** (each edge is an explicit `Edge` in the JSON):
+
+- **A** `internet →phish→ ws-dev →cred_dump→ (creds:u.dev) →rdp_lateral→ jump-01 →priv_esc_local→ →cred_dump→ (creds:adm.ops) →rdp_lateral→ prod-db`
+- **B** `ws-dev →ssh_lateral→ ci-runner →cred_dump→ (creds:svc.ci) →ssh_lateral→ backup-01 →cred_dump→ (creds:svc.backup) →db_login→ prod-db`
+- **C** `internet →phish→ ws-hr →smb_lateral→ fileshare →creds_in_files→ (creds:svc.payroll) →db_login→ prod-db` (from ws-hr)
+- **D** `internet →exploit_public_app→ web-dmz →exploit_public_app→ ci-runner → (B tail)` — no human credential anywhere on it.
+
+Two modelling rules the routes depend on — settle them in P0, not on stage:
+- `phish` grants `session:dst` **and** `admin:dst` (workstation users are local admins — a
+  stated, defensible FinBank assumption). `exploit_public_app` grants `session:dst` only.
+- `cred_dump` requires `admin:src`, so the JSON lists `priv_esc_local` **self-edges** on
+  `jump-01`, `ci-runner` and `backup-01`. Route B/D go `ci-runner →priv_esc_local→
+  →cred_dump→`; the same on `backup-01`. Without these self-edges routes B and D do not
+  exist and the demo has no substituted path.
+- Route C's last hop, `ws-hr →db_login→ prod-db`, is taken *after* the attacker has been to
+  `fileshare`; it is admissible because `session:ws-hr` is still held (CLAUDE.md §6: an edge
+  is admissible from any state whose caps ⊇ requires). A's fixture must include one such
+  "act from an earlier foothold" path.
+
+**Legitimate flows**
+
+| id | flow | identity | crit | evidence |
+|---|---|---|---|---|
+| F1 | payroll-api → prod-db tcp/5432 | svc.payroll | **5** | inventory |
+| F2 | backup-01 → prod-db tcp/5432 | svc.backup | 4 | **inferred** |
+| F3 | ws-dev → jump-01 rdp/3389 | u.dev | 2 | observed |
+| F4 | ci-runner → backup-01 ssh/22 | svc.ci | 3 | inventory |
+| F5 | ws-hr → fileshare smb/445 | u.hr | 2 | observed |
+| F6 | jump-01 → prod-db rdp/3389 | adm.ops | 3 | observed |
+
+**Control catalogue** (8 of the ≤10 slots; costs are relative units, shown as ₹L):
+
+| id | impacts | effect on routes | flows broken | verdict alone |
+|---|---|---|---|---|
+| `seg_prod_db_full` | deny `dst_assets={prod-db}`, breaks | A, B, C, D all cut at the last hop | F1, F2, F6 | **BLOCK** |
+| `seg_prod_db_scoped` | same deny + exceptions for the F1, F2 **and F6** channels (`src_assets={jump-01}, protocols={rdp}, ports={3389}, identity_ids={adm.ops}`) | C cut; A, B, D survive (A through the F6 exception — that is the hole `mfa_humans` closes) | none | DEPLOY (moderate) |
+| `mfa_humans` | deny `identity_kinds={user,admin}`, eff 0.9, no breakage | A, B, C degraded; D untouched | none | DEPLOY (weak alone) |
+| `mfa_all` | + deny `identity_kinds={service_account}`, breaks | everything degraded | F1, F2, F4 — interactive MFA incompatible with non-interactive identities | **BLOCK** |
+| `edr_cred_dump` | deny `techniques={cred_dump}`, eff 0.7 | A, B, D degraded | none | DEPLOY |
+| `patch_web_dmz` | deny `techniques={exploit_public_app}, dst_assets={web-dmz}`, eff 0.95 | D cut | none | DEPLOY |
+| `jump_hardening` | deny `techniques={priv_esc_local}, dst_assets={jump-01}`, eff 0.8 | A degraded | none | REVIEW (weak) |
+| `disable_smb_share` | deny `dst_assets={fileshare}, protocols={smb}`, breaks | C cut | F5 (crit 2) | REVIEW |
+
+**Demo beats this guarantees:** full segmentation → BLOCK with F1 named and route D as the
+attacker's substitute; `seg_prod_db_scoped + mfa_humans` → the constrained optimum, DEPLOY,
+with D still visible as the residual route and `svc.backup admin@prod-db (inferred)` as the
+named unknown; naive top-N-by-paths picks `seg_prod_db_full` and breaks payroll; sync import
+adds `contractor` admin@jump-01 and risk rises.
+
+Numbers (+18%, +14%, 5 → 2) in `CLAUDE.md` §2 are targets; the real ones are pinned at hour
+20 into `DEMO_SCRIPT.md` and `test_scenario.py`.
 
 ---
 
-### Phase 5 — Results and Metrics
-- **Objective:** Define and compute structured simulation results, cost distributions, and before/after deltas.
-- **Tasks:**
-  1. Implement `backend/core/results.py` defining frozen `Result` and `Delta` models.
-  2. Compute `p_success`, `mean_cost`, `p90_cost`, `cost_distribution` histogram bins, and `weighted_risk`.
-  3. Implement `diff(before: Result, after: Result) -> Delta` calculating:
-     - `naive_path_reduction_pct` (headline path count reduction)
-     - `honest_cost_increase_pct` (attacker effort increase)
-     - `substituted_paths` (new emergent paths taken by the attacker)
-- **Files Involved:**
-  - `backend/core/results.py`
-  - `backend/tests/test_results.py`
-- **Deliverables:** Analytics computation module producing comparative change deltas.
-- **Verification / Tests:**
-  ```bash
-  pytest backend/tests/test_results.py -v
-  ```
-- **Exit Criteria:** `diff()` correctly reports path reductions and isolates substituted paths between twin states.
-- **Dependencies:** Phase 3, Phase 4.
-- **Responsibilities:** Track A.
+## Migration from the existing engine (branch `aryan`)
+
+What exists is a v0 "BloodHound-lite": mutable Pydantic models, a NetworkX graph,
+`nx.all_simple_paths` with no capability state, no identities, no controls model, and
+ATT&CK labels inferred from relation strings *after* a path is found. Rule: nothing from it
+is imported by new code; each file is read, ported where useful, and deleted in the PR that
+adds its replacement. No two implementations alive at once.
+
+| Existing (`aryan`) | What it does | Becomes | Owner | Keep |
+|---|---|---|---|---|
+| `engine/models.py` — `NodeModel`, `EdgeModel(relation, port)`, `EnvironmentModel`, `AttackPath/AttackStep`, `BlastRadiusResult` | mutable `List[...]` models; no identities | replaced by `engine/models.py` v2.1 (frozen) | all (P0) | field names `id`, `name`, `zone`; `port` on edges becomes the technique's `channel`; `is_crown_jewel` → `crown_jewel` |
+| `engine/twin.py` — `DigitalTwin.load_environment`, `find_all_attack_paths` (`nx.all_simple_paths`), `compute_blast_radius` (hop distances), `export_graph_json` | graph loading, naive paths, hop-count blast radius | `engine/twin.py` (clone/hash), `engine/search.py`, `engine/blast.py` | A | `export_graph_json`'s node/edge shape for React Flow → D's `/twin/{id}` serialiser; `compute_blast_radius` → `Blast.upper_bound`. **`find_all_attack_paths` is not reusable** — it has no `(node, caps)` state and would fail the creds-two-hops fixture, which is exactly why the fixture is written first |
+| `engine/simulator.py` — `AdversaryAgent._infer_attack_technique`, `simulate_attack`, `test_control_effectiveness` | maps relation → ATT&CK label after the fact; control test = remove one edge, recount, restore (mutates the graph) | `rules/techniques.yaml` + `rules/compile.py` (techniques declared on edges, not inferred); `test_control_effectiveness` **is** `naive_path_reduction_pct`, reborn as `clone → compile(naive=True) → search` | B | the ATT&CK ids it already names (T1078, T1021, T1195 → `exploit_public_app`/webhook story) |
+| `server/app.py` — `/api/graph`, `/api/simulate`, `/api/test-control`, `/api/choke-points`, `/api/blast-radius`, static dashboard mount | FastAPI, CORS `*`, module-level global twin | `server/app.py` + `server/routes.py` per `docs/INTERFACES.md`; `/api/choke-points` → `Result.edge_frequency` | D | app skeleton, CORS block, scenario-dir listing → `/scenarios` |
+| `scenarios/enterprise_cloud.json` — 11 nodes, 13 relation-typed edges, two crown jewels (`rds_core_banking`, `s3_customer_pii_vault`) | FinTech hybrid-cloud story; no identities, grants or flows | **not converted** for the demo — FinBank `golden.json` is written fresh in P0. Keep the file as a P4 stretch second scenario if D has time to add grants/flows | D | the CI/webhook → IAM-role escalation idea is already route D in FinBank |
+| `dashboard/index.html` — 521-line static page, Tailwind from a CDN | graph visualiser served by FastAPI | replaced by the Vite + React + TS app in `dashboard/`; delete `index.html` and the static mount in the PR that adds the scaffold | C | nothing structural; reuse zone colours if they look good |
+| tests | none exist | — | — | — |
+
+Names that continue unchanged from `aryan`: `zone`, `crown_jewel` (was `is_crown_jewel`),
+`port`, the scenario directory `scenarios/`, the module names `engine/`, `server/`,
+`dashboard/`, and `server/app.py`. Everything else is the v2.1 contract.
 
 ---
 
-### Phase 6 — Control Evaluation (The Differentiator)
-- **Objective:** Implement `evaluate_change()` joining security risk reduction with business service flow breakage.
-- **Tasks:**
-  1. Implement `backend/rules/evaluate.py` with `evaluate_change(twin, controls, agents) -> ChangeVerdict`.
-  2. Clone twin with proposed controls applied; re-run Algorithm A and Algorithm B.
-  3. Intersect control scope and blocked techniques with the twin's `ServiceFlow` set to identify `broken_flows`.
-  4. Implement business impact verdict logic:
-     - If any broken flow has `criticality >= 4`: `recommendation = "blocked"`
-     - If security improves with zero broken flows: `recommendation = "deploy"`
-     - Otherwise: `recommendation = "review"`
-- **Files Involved:**
-  - `backend/rules/evaluate.py`
-  - `backend/tests/test_evaluate.py`
-- **Deliverables:** Core change evaluation engine delivering the product differentiator.
-- **Verification / Tests:**
-  ```bash
-  pytest backend/tests/test_evaluate.py -v
-  ```
-- **Exit Criteria (Gate G3):** Evaluating network segmentation on golden scenario detects broken payment ledger flow and outputs `recommendation: "blocked"`.
-- **Dependencies:** Phase 1, Phase 2, Phase 5.
-- **Responsibilities:** Track B.
+## Risk register
+
+| Risk | Signal | Response |
+|---|---|---|
+| Pathfinder silently wrong | Fixture red, or numbers that feel off | Stop everything. Nothing downstream is trustworthy. |
+| Compiler invents transitions | Subset test red | B stops; every path count is inflated until fixed. |
+| State explosion | `SearchBudgetExceeded` on golden | Tighten depth to 6; remove a grant from the scenario, never raise the cap. |
+| Python too slow | `/simulate` over 2 s | Live demo at `n=300`; precompute the rest. |
+| Optimiser sweep too slow | startup precompute > 10 s | Cap catalogue at 8 controls (256 subsets). |
+| Effort metric undefined | control eliminates every route | `effort_increase_pct=None`, `route_eliminated=True`, UI says "no viable route in 1000 trials". Already in the contract. |
+| Optimiser and simulation disagree | `test_scenario` agreement assertion red | Same `route_policy` in both — if they differ, one of them is not using it. |
+| React Flow struggles | Lag | Golden is ~10 nodes; if a generator twin lags, render the attack-surface subgraph only. |
+| Contract churn after hour 12 | Someone proposes a model change | Default no; work around it. |
+| Merge conflicts | Same file, two branches | Someone broke directory ownership — re-read GOVERNANCE §1. |
+| Demo numbers drift | `test_scenario` red | Revert the last change; the run sheet is the spec. |
+| Judge knows the field | "Isn't this just MAL?" | Approved claim, verbatim. You put MAL on slide two yourself. |
+| Judge: "so your attacker is just random" | — | `CLAUDE.md` §12 answer 4. Show the top-5 route table with `p_select`. |
+| Windows `curl` | PowerShell returns an object, not JSON | `curl.exe`, everywhere, always. |
 
 ---
 
-### Phase 7 — Confidence and Verdict Engine
-- **Objective:** Calculate statistical confidence intervals and risk scoring for change advisory board decisions.
-- **Tasks:**
-  1. Implement confidence calculation based on sample size, control efficacy variance, and path coverage.
-  2. Output clear explainability text detailing *why* a change is blocked or approved.
-  3. Formulate structured `ChangeVerdict` payload for frontend rendering.
-- **Files Involved:**
-  - `backend/rules/verdict.py`
-  - `backend/tests/test_verdict.py`
-- **Deliverables:** Explainable decision support engine with confidence bounds.
-- **Verification / Tests:**
-  ```bash
-  pytest backend/tests/test_verdict.py -v
-  ```
-- **Exit Criteria:** Every verdict includes `confidence` score $[0.0, 1.0]$ and plain-English justification.
-- **Dependencies:** Phase 6.
-- **Responsibilities:** Track B.
+## First prompts for each track
+
+Paste at the start of each teammate's Claude Code session (GOVERNANCE §9 opener, then this).
+
+**A —**
+> I am track A, engine. I may only edit `engine/` and `tests/test_fixture.py`,
+> `tests/test_invariants.py`. `models.py` is frozen. `search.py` and `walk.py` read only
+> `CompiledEdge` tuples — never `Twin` directly. Start with `tests/test_fixture.py`: six
+> nodes of hand-built `CompiledEdge`s with known paths, including one reachable only after a
+> credential collected two hops earlier. Do not write `search.py` logic until the test exists
+> and fails for the right reason. `route_policy` is deterministic and is called once per
+> `simulate`, never once per trial.
+> Verify: `pytest tests/test_fixture.py` fails with assertion errors, not import errors.
+
+**B —**
+> I am track B, rules and decisions. I may only edit `rules/`, `tests/test_rules.py`,
+> `tests/test_evaluate.py`. `techniques.yaml` is frozen — I may not change its schema. In
+> `compile.py`, each `Edge` has ONE declared technique; expand only over candidate grants on
+> `dst`, never over other techniques. First test: compiled `(src,dst,technique)` is a subset
+> of the twin's edges. Second test: scoped segmentation denies `ws-hr → prod-db` as
+> `svc.payroll` and allows `backup-01 → prod-db` as `svc.backup`. Until A merges
+> `route_policy`, use `rules/_stub_policy.py`.
+> Verify: `pytest tests/test_rules.py` passes.
+
+**C —**
+> I am track C, frontend. I own `dashboard/` and `scripts/gen_types.py` and may not edit
+> anything under `engine/`, `rules/`, `server/` or `scenarios/`. Scaffold Vite + React + TS + Tailwind, write
+> `src/api/mocks.ts` returning one fake `ChangeVerdict` matching `types.ts`, then build the
+> decision card exactly as CLAUDE.md §2 shows it. The card is the hero; the graph comes
+> after. Do not wait for the backend.
+> Verify: `npm run dev` renders the card with mock numbers.
+
+**D —**
+> I am track D, integration and data. I own `server/`, `scenarios/`, `docs/`,
+> `README.md`, `tests/test_scenario.py`. Build the FastAPI app with `/twin/{id}` and
+> `/simulate` returning a hardcoded `Result` from `server/stubs.py`, plus CORS for the Vite
+> dev server. Then `scenarios/golden.json` v1 with the eight FinBank controls from
+> `docs/IMPLEMENTATION_PLAN.md`.
+> Verify: `curl.exe -X POST localhost:8000/simulate ...` returns a valid Result.
 
 ---
 
-### Phase 8 — Control Optimizer
-- **Objective:** Implement constrained portfolio optimization selecting the most effective defensive controls under budget and operational constraints.
-- **Tasks:**
-  1. Implement `backend/rules/optimize.py` providing `optimize_controls(twin, candidate_controls, budget, max_broken_criticality=3)`.
-  2. Implement greedy selection prioritizing risk reduction per dollar spent while hard-blocking any control that severs flows $\ge 4$.
-  3. Contrast output against naive unconstrained top-N ranking to demonstrate business value.
-- **Files Involved:**
-  - `backend/rules/optimize.py`
-  - `backend/tests/test_optimize.py`
-- **Deliverables:** Constrained knapsack optimization module for security controls.
-- **Verification / Tests:**
-  ```bash
-  pytest backend/tests/test_optimize.py -v
-  ```
-- **Exit Criteria:** Optimizer selects high-impact controls without exceeding budget or breaking critical business flows.
-- **Dependencies:** Phase 6, Phase 7.
-- **Responsibilities:** Track B.
+## A. What changed from v1, and why
 
----
-
-### Phase 9 — Blast Radius and Continuous Sync
-- **Objective:** Implement immediate blast radius calculation and dynamic environment update synchronization.
-- **Tasks:**
-  1. Implement `backend/core/blast_radius.py` computing downstream compromised assets using `nx.descendants` and asset criticality rollups.
-  2. Implement continuous synchronization endpoint re-importing updated scenario JSON and detecting security regression.
-  3. Provide lineage tree tracking (`twin.parent_id`) across successive changes.
-- **Files Involved:**
-  - `backend/core/blast_radius.py`
-  - `backend/core/sync.py`
-  - `backend/tests/test_blast_radius.py`
-- **Deliverables:** Blast radius analyzer and delta sync module.
-- **Verification / Tests:**
-  ```bash
-  pytest backend/tests/test_blast_radius.py -v
-  ```
-- **Exit Criteria:** Blast radius returns downstream compromise set in $<50\text{ms}$; sync re-import successfully detects introduced vulnerabilities.
-- **Dependencies:** Phase 1, Phase 3.
-- **Responsibilities:** Track A (Blast Radius), Track D (Sync).
-
----
-
-### Phase 10 — API and Backend Integration
-- **Objective:** Expose the digital twin engine via high-performance FastAPI REST endpoints with caching.
-- **Tasks:**
-  1. Implement `backend/api/main.py` and `backend/api/routes.py` with the 8 agreed routes:
-     - `GET /twin/{id}`
-     - `POST /twin/{id}/clone`
-     - `POST /simulate`
-     - `POST /evaluate-change`
-     - `POST /optimize`
-     - `GET /matrix/{twin_id}`
-     - `GET /blast-radius/{asset_id}`
-     - `GET /lineage/{twin_id}`
-  2. Implement content-addressed cache in `backend/api/cache.py` keyed by `(twin_hash, agent_id, seed, n)`.
-  3. Configure CORS middleware for local frontend development.
-  4. Precompute golden scenario simulation at application startup for instant demo response.
-- **Files Involved:**
-  - `backend/api/main.py`
-  - `backend/api/routes.py`
-  - `backend/api/cache.py`
-  - `backend/tests/test_api.py`
-- **Deliverables:** Fully functional FastAPI backend with content-addressed caching.
-- **Verification / Tests:**
-  ```bash
-  pytest backend/tests/test_api.py -v
-  ```
-- **Exit Criteria (Gate G1 / Integration):** All 8 endpoints return valid schema-conforming JSON responses; cached responses return in $<10\text{ms}$.
-- **Dependencies:** Phase 3, 4, 5, 6, 8, 9.
-- **Responsibilities:** Track D.
-
----
-
-### Phase 11 — Frontend Dashboard
-- **Objective:** Build an intuitive, high-impact security change advisory dashboard in React 18, TypeScript, and Tailwind CSS.
-- **Tasks:**
-  1. Scaffold frontend with Vite, TypeScript, Tailwind, Lucide icons, and React Flow.
-  2. Implement interactive network topology graph displaying assets, zones, and animated attack paths.
-  3. Build the Change Advisory Console displaying `ChangeVerdict`, `broken_flows` warning alerts, and recommendation badges.
-  4. Build Recharts visualization with overlaid before/after attacker cost histograms.
-  5. Implement control optimizer panel and matrix heatmap view.
-- **Files Involved:**
-  - `frontend/src/App.tsx`
-  - `frontend/src/views/TopologyView.tsx`
-  - `frontend/src/views/ChangeConsole.tsx`
-  - `frontend/src/views/OptimizerView.tsx`
-  - `frontend/src/components/CostHistogram.tsx`
-  - `frontend/src/api/client.ts`
-- **Deliverables:** Interactive web interface displaying graph, simulation metrics, and change verdicts.
-- **Verification / Tests:**
-  ```bash
-  cd frontend && npm run build
-  ```
-- **Exit Criteria:** Frontend builds with zero TypeScript errors; renders topology and live simulation results fetched from FastAPI backend.
-- **Dependencies:** Phase 0 (types), Phase 10 (API).
-- **Responsibilities:** Track C.
-
----
-
-### Phase 12 — Testing and Hardening
-- **Objective:** Execute rigorous integration testing, performance profiling, edge-case validation, and feature freeze.
-- **Tasks:**
-  1. Implement `backend/tests/test_scenario.py` verifying the golden demo scenario against exact run sheet values.
-  2. Profile performance to ensure end-to-end simulation returns under 2 seconds.
-  3. Build "Reset Demo" mechanism to quickly restore pristine scenario state between judging demonstrations.
-  4. Enforce strict Feature Freeze (Gate G4).
-- **Files Involved:**
-  - `backend/tests/test_scenario.py`
-  - `backend/tests/test_invariants.py`
-  - Entire repository
-- **Deliverables:** Hardened codebase with zero test failures and pinned scenario assertions.
-- **Verification / Tests:**
-  ```bash
-  pytest -v
-  ```
-- **Exit Criteria (Gate G4 — Feature Freeze):** 100% test pass rate across all suites; zero new feature PRs accepted.
-- **Dependencies:** Phases 1–11.
-- **Responsibilities:** All tracks (A, B, C, D).
-
----
-
-### Phase 13 — Final Demo Integration
-- **Objective:** Rehearse the timed 4-minute presentation, calibrate demonstration narratives, prepare fallback assets, and finalize pitch slides.
-- **Tasks:**
-  1. Conduct full timed rehearsals (under 4 minutes) executing the exact FinBank change narrative.
-  2. Verify oral answers to core judge technical questions (prior art boundaries, state explosion, model confidence).
-  3. Capture high-resolution video backup of a complete clean demo run.
-  4. Configure secondary laptop as local hot-standby.
-- **Files Involved:**
-  - `docs/DEMO_SCRIPT.md`
-  - `docs/RUNBOOK.md`
-- **Deliverables:** Polished 4-minute presentation, synchronized slide deck, and fallback recording.
-- **Verification / Tests:**
-  - Timed dry-run completion $<240\text{s}$ with both terminals (`uvicorn` and `npm run dev`) active.
-- **Exit Criteria (Gate G5):** Flawless end-to-end execution during final team rehearsal.
-- **Dependencies:** Phase 12.
-- **Responsibilities:** All tracks (D leads presentation flow; A defends technical questions).
-
----
-
-## 7. Final Definition of Done
-
-The project is considered complete when all of the following conditions are satisfied:
-
-- [ ] **Data Contract & Architecture:**
-  - `backend/core/models.py` uses frozen Pydantic models with immutable `tuple` and `frozenset` collections.
-  - Techniques are defined externally in `backend/rules/techniques.yaml` with valid MITRE ATT&CK IDs.
-- [ ] **Dual Algorithms Implemented & Decoupled:**
-  - Algorithm A (`core/search.py`) discovers complete state-space attack paths bounded by depth and state limits.
-  - Algorithm B (`core/walk.py`) performs fast Monte Carlo sampled walks without invoking global search.
-- [ ] **Business Service Flow Differentiation:**
-  - `ServiceFlow` dependencies are tracked with criticality ratings.
-  - `evaluate_change()` correctly flags broken flows $\ge 4$ and blocks unsafe security changes.
-- [ ] **Decision & Optimization Support:**
-  - Constrained optimizer selects portfolios maximizing security while guaranteeing zero business flow breakage.
-  - Confidence intervals and explainable verdict justifications accompany every evaluation.
-- [ ] **API & Frontend Delivery:**
-  - FastAPI serves all 8 endpoints with content-addressed caching.
-  - React Flow renders topology and animated attack paths; Recharts renders overlaid cost histograms.
-- [ ] **Test Coverage & Stability:**
-  - Fixture tests, invariant tests, and scenario tests pass with 100% success rate.
-  - Zero unhandled exceptions or infinite loops on cyclic topologies.
-- [ ] **Demo Preparedness:**
-  - Golden scenario executes cleanly in under 4 minutes.
-  - Backup video recording and hot-standby system prepared.
+| v1 | v2.1 | Reason |
+|---|---|---|
+| `broken_flows` = control's blocked techniques × scope ∩ flows | flows carry protocol/port/identity; controls act on channel selectors with selector exceptions | comparing an attack-technique string to a business flow proved nothing |
+| `Identity` disconnected from assets | `PrivilegeGrant` (session/login/admin); techniques resolve `creds:who` through grants | brief requires identities and privileges in the twin |
+| local random walk, "adaptation is emergent" | `route_policy` over the cached inventory; plan-then-execute | a local walk is not re-planning; this is honest and still keeps search out of the MC loop |
+| `confidence` field, uncomputed | evidence on every grant/flow/edge; computed over decisive elements; `undetermined` | "how confident we are" is in the pitch sentence |
+| greedy "optimal" | exhaustive ≤1024 subsets, same `route_policy` as the agent, no pruning | greedy misses portfolios; optimiser and simulation must tell the same story |
+| `blocked / else deploy / else review` | BLOCK / REVIEW / DEPLOY rules with the `None`-effort case handled | verdict logic was wrong |
+| `honest_cost_increase_pct`, "expected cost" | `effort_increase_pct`, "modelled attacker-effort score" | Σ cost/p is a heuristic; do not oversell it |
+| 15 techniques | 10 | more ATT&CK entries do not improve the demo |
+| hero = graph + histogram | hero = decision card | the product is a decision |
+| `blast_radius.py` under B, `/matrix` under A | `engine/blast.py` under A, `/matrix` route under D | v1 violated its own ownership map |
+| `nx.descendants` blast radius | `search` seeded from the fallen asset; descendants as labelled upper bound | descendants ignores credentials |
+| 200-node generator in P2 | stretch only, ≤80 nodes | endangered G2 for a vanity number |
+| `model_dump_json` hash | canonical dump with sorted frozensets | frozenset order is not stable across processes |
+| — | `docs/INTERFACES.md`, consumer-owned stubs, GOVERNANCE §9 | four AI sessions need one explicit channel |
+| — | migration from the `aryan` branch engine onto `UDIT` | there is prior code; port what is useful, delete the rest, never fork it |

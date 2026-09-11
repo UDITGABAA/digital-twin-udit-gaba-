@@ -1,0 +1,90 @@
+# 10 ATT&CK techniques grounded in MITRE ATT&CK (CLAUDE.md §5)
+- id: phish
+  attck: T1566
+  channel: {protocol: https, port: 443}
+  requires: []
+  grants: [session:dst, admin:dst]
+  base_success: 0.85
+  cost: 1
+  noise: 0.2
+
+- id: exploit_public_app
+  attck: T1190
+  channel: {protocol: https, port: 443}
+  requires: []
+  grants: [session:dst]
+  base_success: 0.75
+  cost: 2
+  noise: 0.5
+
+- id: cred_dump
+  attck: T1003
+  channel: null
+  requires: [admin:src]
+  grants: [creds:sessions@src]
+  base_success: 0.8
+  cost: 1
+  noise: 0.4
+
+- id: priv_esc_local
+  attck: T1068
+  channel: null
+  requires: [session:src]
+  grants: [admin:src]
+  base_success: 0.7
+  cost: 2
+  noise: 0.5
+
+- id: creds_in_files
+  attck: T1552.001
+  channel: null
+  requires: [session:src]
+  grants: [creds:who]
+  base_success: 0.8
+  cost: 1
+  noise: 0.1
+
+- id: rdp_lateral
+  attck: T1021.001
+  channel: {protocol: rdp, port: 3389}
+  requires: [session:src, creds:who]
+  grants: [session:dst]
+  base_success: 0.9
+  cost: 2
+  noise: 0.3
+
+- id: ssh_lateral
+  attck: T1021.004
+  channel: {protocol: ssh, port: 22}
+  requires: [session:src, creds:who]
+  grants: [session:dst]
+  base_success: 0.9
+  cost: 2
+  noise: 0.2
+
+- id: smb_lateral
+  attck: T1021.002
+  channel: {protocol: smb, port: 445}
+  requires: [session:src, creds:who]
+  grants: [session:dst]
+  base_success: 0.85
+  cost: 2
+  noise: 0.3
+
+- id: db_login
+  attck: T1078
+  channel: {protocol: tcp, port: 5432}
+  requires: [session:src, creds:who]
+  grants: [session:dst]
+  base_success: 0.95
+  cost: 1
+  noise: 0.2
+
+- id: exfil_c2
+  attck: T1041
+  channel: {protocol: https, port: 443}
+  requires: [session:src]
+  grants: [data:src]
+  base_success: 0.9
+  cost: 1
+  noise: 0.6
