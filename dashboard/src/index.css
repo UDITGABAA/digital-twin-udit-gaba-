@@ -34,8 +34,8 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-:root { color-scheme: light; }
-html, body { background: var(--color-canvas); color: var(--color-text); }
+:root { color-scheme: only light; }   /* opts out of Chrome/Brave auto-dark (force dark) so white stays white */
+html, body { background: #ffffff; color: var(--color-text); }
 body { font-family: var(--font-sans); font-variant-numeric: tabular-nums; line-height: 1.5; -webkit-font-smoothing: antialiased; }
 body::after { /* grain: breaks digital flatness, never visible as a pattern */
   content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 60; opacity: 0.035; mix-blend-mode: multiply;
