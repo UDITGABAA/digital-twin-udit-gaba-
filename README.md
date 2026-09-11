@@ -60,17 +60,37 @@ the FinBank scenario) → [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md).
 ## Run
 
 ```bash
-pip install -r requirements.txt && uvicorn server.app:app --reload --port 8000
+pip install -r requirements.txt
 ```
 ```bash
-cd dashboard && npm install && npm run dev
+python -m uvicorn server.app:app --port 8000
 ```
+```bash
+npm install --prefix dashboard && npm run dev --prefix dashboard
+```
+Open http://localhost:5173. The dashboard proxies `/api` to `:8000`.
+
 ```bash
 pytest
+```
+35 tests: engine fixture + invariants, rules (compiler never invents a transition, scoped
+segmentation semantics), evaluate (verdict rules, confidence), and `test_scenario.py`, which
+pins every number in `docs/DEMO_SCRIPT.md`.
+
+Regenerate the FinBank scenario after editing `scripts/build_golden.py`:
+```bash
+PYTHONPATH=. python scripts/build_golden.py
 ```
 
 Localhost only. Two terminals. Second laptop as hot backup. `curl.exe`, not `curl`, on
 Windows.
+
+## Status
+
+Built solo on `main` of this repo. Critical path complete: `models -> compile -> search ->
+walk -> evaluate_change -> optimize`, FastAPI surface, dashboard (decision card, graph,
+effort histograms, optimiser, sync, blast radius). Cut for solo: `/matrix` view, lineage
+view, generated `types.ts` (hand-written), CI workflow.
 
 ## Claims we make and do not make
 

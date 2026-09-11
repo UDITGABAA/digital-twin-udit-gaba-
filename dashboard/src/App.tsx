@@ -16,7 +16,7 @@ export default function App() {
   const [picked, setPicked] = useState<string[]>([]);
   const [baseline, setBaseline] = useState<Result | null>(null);
   const [paths, setPaths] = useState<{ naive_count: number; count: number; routes: Route[] } | null>(null);
-  const [prevRisk, setPrevRisk] = useState<number | null>(null);
+  const [prev, setPrev] = useState<{ p: number; risk: number } | null>(null);
   const [verdict, setVerdict] = useState<ChangeVerdict | null>(null);
   const [route, setRoute] = useState<Route | null>(null);
   const [blast, setBlast] = useState<Blast | null>(null);
@@ -44,7 +44,7 @@ export default function App() {
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
   const loadScenario = async (name: string) => {
-    setPrevRisk(baseline?.weighted_risk ?? null);
+    setPrev(baseline ? { p: baseline.p_success, risk: baseline.weighted_risk } : null);
     await api.load(name);
     setScenario(name); setPicked([]); setVerdict(null); setRoute(null); setBlast(null);
     await refresh("current", agentId);
@@ -55,7 +55,8 @@ export default function App() {
     setBlast(b); setRoute(null);
   };
 
-  const riskDelta = prevRisk !== null && baseline ? baseline.weighted_risk - prevRisk : null;
+  const riskDelta = prev && baseline ? baseline.weighted_risk - prev.risk : null;
+  const pDelta = prev && baseline ? baseline.p_success - prev.p : null;
 
   return (
     <div className="mx-auto max-w-[1500px] p-5">
@@ -84,10 +85,12 @@ export default function App() {
         <div className="mb-4 flex flex-wrap gap-6 rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm">
           <span>twin <span className="font-mono text-slate-400">{twinId.slice(0, 10)}</span></span>
           <span>critical paths to crown jewel: <b>{paths?.naive_count ?? "…"}</b></span>
-          <span>p(success) <b>{baseline.p_success.toFixed(2)}</b> <span className="text-slate-500">[{baseline.p_success_ci[0].toFixed(2)}–{baseline.p_success_ci[1].toFixed(2)}]</span></span>
+          <span>p(success) <b>{baseline.p_success.toFixed(2)}</b> <span className="text-slate-500">[{baseline.p_success_ci[0].toFixed(2)}–{baseline.p_success_ci[1].toFixed(2)}]</span>
+            {pDelta !== null && pDelta !== 0 && <span className={pDelta > 0 ? "ml-1 font-semibold text-red-300" : "ml-1 text-emerald-300"}>({pDelta > 0 ? "+" : ""}{pDelta.toFixed(2)} since last twin)</span>}
+          </span>
           <span>mean effort <b>{baseline.mean_effort?.toFixed(1) ?? "—"}</b></span>
           <span>weighted risk <b>{baseline.weighted_risk.toFixed(2)}</b>
-            {riskDelta !== null && <span className={riskDelta > 0 ? "ml-1 text-red-300" : "ml-1 text-emerald-300"}>({riskDelta > 0 ? "+" : ""}{riskDelta.toFixed(2)} after sync)</span>}
+            {riskDelta !== null && <span className={riskDelta > 0 ? "ml-1 text-red-300" : "ml-1 text-emerald-300"}>({riskDelta > 0 ? "+" : ""}{riskDelta.toFixed(2)})</span>}
           </span>
           <span className="text-slate-500">top route: {baseline.routes[0] ? `${baseline.routes[0].route.map((e) => e.technique).join(" › ")} (p_select ${baseline.routes[0].p_select.toFixed(2)})` : "none"}</span>
         </div>

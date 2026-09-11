@@ -9,3 +9,4 @@ dist/
 *.zip
 .DS_Store
 .claude/
+dashboard/tsconfig.tsbuildinfo
