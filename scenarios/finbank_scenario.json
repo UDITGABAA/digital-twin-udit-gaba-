@@ -136,6 +136,7 @@
       "name": "FIDO2 / TOTP Multi-Factor Authentication",
       "type": "authentication",
       "status": "active",
+      "enabled": true,
       "framework_reference": "NIST SP 800-63B / CIS Control 6",
       "covered_entities": [
         "asset-auth-service",
@@ -147,6 +148,7 @@
       "name": "Cloud WAF & DDoS Shielding",
       "type": "network_defense",
       "status": "active",
+      "enabled": true,
       "framework_reference": "OWASP Top 10 / CIS Control 9",
       "covered_entities": [
         "asset-web-portal"
@@ -157,6 +159,7 @@
       "name": "Next-Gen Endpoint Detection and Response",
       "type": "host_defense",
       "status": "active",
+      "enabled": true,
       "framework_reference": "CIS Control 10 / MITRE D3FEND",
       "covered_entities": [
         "asset-corp-workstation",
@@ -168,6 +171,7 @@
       "name": "AES-256 Column Encryption & KMS Key Rotation",
       "type": "data_protection",
       "status": "active",
+      "enabled": true,
       "framework_reference": "PCI-DSS Requirement 3.4",
       "covered_entities": [
         "asset-core-banking-db"
@@ -182,7 +186,10 @@
       "relation_type": "ACCESSES",
       "protocol": "HTTPS",
       "port": 443,
-      "encrypted": true
+      "encrypted": true,
+      "requires": {},
+      "grants": {},
+      "control": null
     },
     {
       "id": "rel-web-api",
@@ -191,7 +198,10 @@
       "relation_type": "CONNECTS_TO",
       "protocol": "gRPC",
       "port": 50051,
-      "encrypted": true
+      "encrypted": true,
+      "requires": {},
+      "grants": {},
+      "control": null
     },
     {
       "id": "rel-api-auth",
@@ -200,7 +210,10 @@
       "relation_type": "AUTHENTICATES_VIA",
       "protocol": "HTTPS",
       "port": 8443,
-      "encrypted": true
+      "encrypted": true,
+      "requires": {},
+      "grants": {},
+      "control": null
     },
     {
       "id": "rel-api-pay",
@@ -209,7 +222,10 @@
       "relation_type": "ROUTES_TO",
       "protocol": "HTTPS",
       "port": 8080,
-      "encrypted": true
+      "encrypted": true,
+      "requires": {},
+      "grants": {},
+      "control": null
     },
     {
       "id": "rel-pay-db",
@@ -218,7 +234,10 @@
       "relation_type": "EXECUTES_SQL",
       "protocol": "TLS/TCP",
       "port": 5432,
-      "encrypted": true
+      "encrypted": true,
+      "requires": {},
+      "grants": {},
+      "control": null
     },
     {
       "id": "rel-svc-db",
@@ -227,16 +246,28 @@
       "relation_type": "READS_WRITES",
       "protocol": "TLS/TCP",
       "port": 5432,
-      "encrypted": true
+      "encrypted": true,
+      "requires": {},
+      "grants": {},
+      "control": null
     },
     {
       "id": "rel-admin-jump",
-      "source": "id-user-admin",
+      "source": "asset-corp-workstation",
       "target": "asset-admin-jumpbox",
-      "relation_type": "LOGS_INTO",
+      "relation_type": "REMOTE_ACCESS",
       "protocol": "SSH",
       "port": 22,
-      "encrypted": true
+      "encrypted": true,
+      "requires": {
+        "capabilities": ["admin_credentials"],
+        "privileges": ["infrastructure_admin"]
+      },
+      "grants": {
+        "capabilities": ["jumpbox_access"],
+        "privileges": []
+      },
+      "control": "ctrl-mfa"
     },
     {
       "id": "rel-jump-vault",
@@ -245,7 +276,16 @@
       "relation_type": "MANAGES",
       "protocol": "HTTPS",
       "port": 443,
-      "encrypted": true
+      "encrypted": true,
+      "requires": {
+        "capabilities": ["jumpbox_access"],
+        "privileges": []
+      },
+      "grants": {
+        "capabilities": ["vault_admin"],
+        "privileges": ["backup_operator"]
+      },
+      "control": null
     }
   ]
 }

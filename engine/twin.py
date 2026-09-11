@@ -90,8 +90,38 @@ class CyberDigitalTwin:
                 relation_type=rel.relation_type,
                 protocol=rel.protocol,
                 port=rel.port,
-                encrypted=rel.encrypted
+                encrypted=rel.encrypted,
+                requires=rel.requires or {},
+                grants=rel.grants or {},
+                control=rel.control
             )
+
+    def resolve_node_id(self, node_id: str) -> str:
+        """Resolve a friendly or prefixed node ID to the exact graph node identifier."""
+        if node_id in self.graph:
+            return node_id
+        
+        # Try common prefixes
+        candidate_asset = f"asset-{node_id}"
+        if candidate_asset in self.graph:
+            return candidate_asset
+            
+        candidate_id = f"id-{node_id}"
+        if candidate_id in self.graph:
+            return candidate_id
+
+        # Try stripped prefix if already prefixed
+        if node_id.startswith("asset-") and node_id[6:] in self.graph:
+            return node_id[6:]
+        if node_id.startswith("id-") and node_id[3:] in self.graph:
+            return node_id[3:]
+
+        # Case-insensitive name match
+        for nid, data in self.graph.nodes.items():
+            if data.get("name", "").lower() == node_id.lower():
+                return nid
+
+        return node_id
 
     # ------------------------------------------------------------------
     # Detection & Property Metrics

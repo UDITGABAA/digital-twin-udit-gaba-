@@ -52,7 +52,7 @@ NetworkX
 4. `asset-api-gateway` $\xrightarrow{\text{ROUTES_TO}}$ `asset-payment-processor` (HTTPS:8080)
 5. `asset-payment-processor` $\xrightarrow{\text{EXECUTES_SQL}}$ `asset-core-banking-db` (TLS/TCP:5432)
 6. `id-svc-payment-app` $\xrightarrow{\text{READS_WRITES}}$ `asset-core-banking-db` (TLS/TCP:5432)
-7. `id-user-admin` $\xrightarrow{\text{LOGS_INTO}}$ `asset-admin-jumpbox` (SSH:22)
+7. `asset-corp-workstation` $\xrightarrow{\text{REMOTE_ACCESS}}$ `asset-admin-jumpbox` (SSH:22)
 8. `asset-admin-jumpbox` $\xrightarrow{\text{MANAGES}}$ `asset-backup-vault` (HTTPS:443)
 
 ### 4. Security Controls (4 Detected)
@@ -60,6 +60,29 @@ NetworkX
 - `ctrl-waf`: Cloud Web Application Firewall & DDoS Protection (Covers: Web Portal)
 - `ctrl-edr`: Endpoint Detection & Response (Covers: Workstation, Jumpbox)
 - `ctrl-db-enc`: AES-256 Column Encryption & Key Management (Covers: Core Banking Database)
+
+---
+
+## Stateful Attack Path Simulation
+
+1. Digital Twin loads scenario.
+2. Attacker starts with capabilities/privileges.
+3. Rule Engine evaluates possible movements.
+4. Attack Path Engine explores valid states.
+5. Security controls can block movement.
+6. The result shows whether a critical target is reachable.
+
+### Running the Simulation Commands
+
+Run all tests:
+```bash
+python -m pytest tests/ -v
+```
+
+Run simulation CLI:
+```bash
+python main.py scenarios/scenario.json
+```
 
 ---
 
@@ -84,13 +107,4 @@ python main.py --detail
 Run against a custom scenario file:
 ```bash
 python main.py path/to/custom_scenario.json
-```
-
----
-
-## Running Tests
-
-Execute the automated pytest suite:
-```bash
-pytest -v
 ```
