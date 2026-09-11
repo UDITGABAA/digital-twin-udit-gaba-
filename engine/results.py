@@ -1,4 +1,4 @@
-﻿"""Result analysis and diffing models for simulation outcomes (Track A).
+"""Result analysis and diffing models for simulation outcomes (Track A).
 
 Frozen contract models defined in docs/INTERFACES.md:
 - RouteStat: Route choice combined with observed simulation performance

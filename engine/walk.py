@@ -1,4 +1,4 @@
-﻿"""Plan-then-execute agent route selection and Monte Carlo simulation (Algorithm B).
+"""Plan-then-execute agent route selection and Monte Carlo simulation (Algorithm B).
 
 Implements:
 - route_policy(): Deterministic ranking and probability assignment over path inventory
@@ -10,7 +10,7 @@ import random
 from typing import Dict, List, Optional, Tuple
 from pydantic import BaseModel
 
-from engine.models import Agent, CompiledEdge, Twin
+from engine.models import Agent, CompiledEdge, Twin, twin_hash
 from engine.search import Inventory, Route, search
 from engine.results import Result, RouteStat
 
@@ -24,8 +24,8 @@ class RouteChoice(BaseModel, frozen=True):
     noise: float
 
 
-# Cache for path searches across repeated simulation queries: (hash(edges), agent.id) -> Inventory
-_SEARCH_CACHE: Dict[Tuple[int, str], Inventory] = {}
+# Cache for path searches: (twin_hash, edges signature, agent.id) -> Inventory
+_SEARCH_CACHE: Dict[Tuple[str, tuple, str], Inventory] = {}
 
 
 def clear_search_cache() -> None:
@@ -130,10 +130,11 @@ def simulate(
 ) -> Result:
     """Execute n Monte Carlo trials of adversary attack simulation.
     
-    Calls search (cached by (hash(edges), agent.id)) once,
+    Calls search (cached by (twin_hash, edge signature, agent.id)) once,
     route_policy once, then runs n trials with seeded PRNG.
     """
-    cache_key = (hash(edges), agent.id)
+    edge_sig = tuple((e.src, e.dst, e.technique, e.identity_id, round(e.p_success, 6)) for e in edges)
+    cache_key = (twin_hash(twin), edge_sig, agent.id)
     if cache_key in _SEARCH_CACHE:
         inventory = _SEARCH_CACHE[cache_key]
     else:

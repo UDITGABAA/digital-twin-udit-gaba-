@@ -1,4 +1,4 @@
-﻿"""Blast radius calculation with realistic credential expansion vs upper-bound topological reachability.
+"""Blast radius calculation with realistic credential expansion vs upper-bound topological reachability.
 
 Track A component implementing blast_radius() according to docs/INTERFACES.md:
 - upper_bound: NetworkX descendants (pure topology, ignores credentials and controls)

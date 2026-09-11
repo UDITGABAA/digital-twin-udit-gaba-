@@ -1,4 +1,4 @@
-﻿"""Complete state-space attack path search (Algorithm A).
+"""Complete state-space attack path search (Algorithm A).
 
 DFS over (node, frozenset(capabilities_held)).
 Capabilities accumulate.
