@@ -21,6 +21,10 @@ class Blast(BaseModel, frozen=True):
     upper_bound: tuple[str, ...]                                # nx.descendants, ignores credentials
 
 
+def twin_kind(twin: Twin, asset_id: str) -> str:
+    return next((a.kind for a in twin.assets if a.id == asset_id), "server")
+
+
 def blast_radius(
     twin: Twin,
     edges: tuple[CompiledEdge, ...],
@@ -42,7 +46,7 @@ def blast_radius(
     for asset in twin.assets:
         digraph.add_node(asset.id)
     for edge in edges:
-        if edge.src != edge.dst:
+        if edge.src != edge.dst and not (twin_kind(twin, edge.src) == "internet" and edge.src != asset_id):
             digraph.add_edge(edge.src, edge.dst)
 
     if digraph.has_node(asset_id):
@@ -61,10 +65,14 @@ def blast_radius(
             held_caps.add(f"{grant.capability}:{asset_id}")
             held_caps.add(f"creds:{grant.identity_id}")
 
+    # the internet is a sink for exfil, not a launchpad: never expand from it unless it is the origin
+    terminal = {a.id for a in twin.assets if a.kind == "internet" and a.id != asset_id}
     changed = True
     while changed:
         changed = False
         for edge in edges:
+            if edge.src in terminal:
+                continue
             if edge.src in reached_assets and edge.requires.issubset(held_caps):
                 if edge.dst not in reached_assets:
                     reached_assets.add(edge.dst)
