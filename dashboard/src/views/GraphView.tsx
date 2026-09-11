@@ -51,7 +51,8 @@ export function GraphView({ graph, route, blast, onSelectAsset }: {
   return (
     <div className="h-[560px] rounded-xl border border-slate-800 bg-slate-950">
       <ReactFlow nodes={nodes} edges={edges} fitView proOptions={{ hideAttribution: true }}
-        onNodeClick={(_, n) => onSelectAsset(n.id)} nodesDraggable={false} colorMode="dark">
+        onNodeClick={(_, n) => onSelectAsset(n.id)} nodesDraggable={false} colorMode="dark"
+        zoomOnScroll={false} panOnScroll={false} preventScrolling={false}>
         <Background color="#1e293b" />
       </ReactFlow>
       <div className="px-3 py-1 text-xs text-slate-500">
