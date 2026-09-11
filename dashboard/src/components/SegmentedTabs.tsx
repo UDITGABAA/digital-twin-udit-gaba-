@@ -32,7 +32,7 @@ export function SegmentedTabs({ items, value, onChange, className }: {
 
   return (
     <div ref={box} role="tablist" className={cn("relative inline-flex items-center gap-1 rounded-lg border border-line bg-surface p-1", className)}>
-      <motion.div aria-hidden className="absolute top-1 bottom-1 rounded-md bg-ink" initial={false}
+      <motion.div aria-hidden className="absolute top-1 bottom-1 rounded-md bg-accent" initial={false}
         animate={{ transform: `translateX(${dims.left}px)`, width: dims.width }}
         transition={{ type: "spring", stiffness: 500, damping: 40, mass: 0.6 }} style={{ left: 0 }} />
       {items.map((t, i) => {

@@ -407,13 +407,14 @@ non-interactive service identities."* Never "service accounts cannot MFA".
 - Frontend: React 19, TypeScript, Vite, Tailwind v4, React Flow (graph), Recharts (the
   overlaid attacker-effort histograms — the thesis made visible), `motion`, Phosphor icons
   (bold), `@number-flow/react`. **Design system** (taste-skill minimalist + redesign rules,
-  impeccable Operate mode, KokonutUI components): warm bone canvas, white surfaces, off-black
-  ink, 1px `#EAEAEA` lines, **one accent — burnt orange `#E4622A`** meaning the attacker /
-  the primary action / the current selection; verdicts and flows in the skill's muted pastels
-  only. Geist for UI, Instrument Serif for the decision headline, Geist Mono for data. No
-  Inter, no Lucide, no heavy shadows, no pill containers, no left sidebar, no emoji. Ported
-  components: KokonutUI `SmoothTab` (adversary switch) and `HoldButton` (hold to run the
-  attack). Motion only where it conveys state (Emil Kowalski's gate).
+  impeccable Operate mode, KokonutUI components): **white and orange, nothing black.** Pure
+  white canvas and surfaces, 1px warm lines, warm-charcoal text (`#2A241F`, never `#000`),
+  **one accent — orange `#F0621E`** for the attacker, every primary action, the selected
+  tab, the verdict word and the crown jewel; verdicts and flows in muted pastels only.
+  **One typeface — Outfit** at 400/500/600; no serif display, no monospace (tabular numerals
+  instead). No Inter, no Lucide, no heavy shadows, no pill containers, no left sidebar, no
+  emoji. Ported components: KokonutUI `SmoothTab` (adversary switch) and `HoldButton` (hold
+  to run the attack). Motion only where it conveys state (Emil Kowalski's gate).
 - **Run on localhost. Do not deploy.** Two terminals, `uvicorn` + `vite` (`scripts/demo.ps1`
   starts both). If Vite dies, `uvicorn` alone serves the built dashboard at `:8000`. Second
   laptop as hot backup.

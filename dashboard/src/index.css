@@ -5,24 +5,24 @@
    Orange is the only saturated colour and it means: the attacker, the primary action, the
    current selection. Status uses the muted pastels; nothing else gets colour. */
 @theme {
-  --font-sans: "Geist", "SF Pro Display", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Instrument Serif", "Newsreader", Georgia, serif;
-  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-sans: "Outfit", "Segoe UI Variable Display", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-sans);
+  --font-mono: var(--font-sans);
 
-  --color-canvas: #fbfbfa;
+  --color-canvas: #ffffff;
   --color-surface: #ffffff;
-  --color-raised: #f7f6f3;
-  --color-line: #eaeaea;
-  --color-line-strong: #d9d6d0;
-  --color-ink: #111111;
-  --color-text: #2f3437;
-  --color-muted: #6f6b66;
-  --color-faint: #a39e97;
+  --color-raised: #fff6f0;
+  --color-line: #ece7e1;
+  --color-line-strong: #dcd4cb;
+  --color-ink: #2a241f;
+  --color-text: #3d3630;
+  --color-muted: #7d746b;
+  --color-faint: #a89f95;
 
-  --color-accent: #e4622a;
-  --color-accent-deep: #9a3b12;
-  --color-accent-tint: #fcece3;
-  --color-accent-soft: #f6b58f;
+  --color-accent: #f0621e;
+  --color-accent-deep: #b8470f;
+  --color-accent-tint: #fff0e7;
+  --color-accent-soft: #f9b48c;
 
   --color-red-tint: #fdebec;   --color-red-ink: #9f2f2d;
   --color-yellow-tint: #fbf3db; --color-yellow-ink: #956400;
@@ -47,13 +47,13 @@ body::after { /* grain: breaks digital flatness, never visible as a pattern */
 * { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 8px; }
-.skip { position: absolute; left: -999px; top: 8px; background: var(--color-ink); color: white; padding: 6px 10px; border-radius: 6px; z-index: 100; }
+.skip { position: absolute; left: -999px; top: 8px; background: var(--color-accent); color: white; padding: 6px 10px; border-radius: 6px; z-index: 100; }
 .skip:focus { left: 8px; }
 
 h1, h2, h3 { color: var(--color-ink); text-wrap: balance; }
-.display { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.02em; line-height: 1.02; }
+.display { font-family: var(--font-sans); font-weight: 600; letter-spacing: -0.03em; line-height: 1.05; }
 .label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-faint); font-weight: 500; }
-.mono { font-family: var(--font-mono); font-size: 12px; }
+.mono { font-family: var(--font-sans); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 
 /* One surface vocabulary: 1px line, 12px outer / 8px inner radius, no shadow. */
 .card { background: var(--color-surface); border: 1px solid var(--color-line); border-radius: 12px; }
@@ -66,10 +66,10 @@ h1, h2, h3 { color: var(--color-ink); text-wrap: balance; }
 .btn:hover { background: var(--color-raised); border-color: var(--color-line-strong); }
 .btn:active { transform: scale(0.98); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn-ink { background: var(--color-ink); border-color: var(--color-ink); color: white; }
-.btn-ink:hover { background: #333333; border-color: #333333; }
+.btn-ink { background: var(--color-accent); border-color: var(--color-accent); color: white; }
+.btn-ink:hover { background: var(--color-accent-deep); border-color: var(--color-accent-deep); }
 .btn-accent { background: var(--color-accent); border-color: var(--color-accent); color: white; }
-.btn-accent:hover { background: #d0561f; border-color: #d0561f; }
+.btn-accent:hover { background: var(--color-accent-deep); border-color: var(--color-accent-deep); }
 .btn-icon { padding: 7px; }
 
 /* Control chips: the proposal composer. Selected = accent tint, not a filled block. */
@@ -79,7 +79,7 @@ h1, h2, h3 { color: var(--color-ink); text-wrap: balance; }
 .chip:hover { border-color: var(--color-line-strong); background: var(--color-raised); }
 .chip:active { transform: scale(0.98); }
 .chip[aria-pressed="true"] { border-color: var(--color-accent); background: var(--color-accent-tint); }
-.chip .cost { font-family: var(--font-mono); font-size: 11px; color: var(--color-muted); }
+.chip .cost { font-size: 11px; color: var(--color-muted); }
 .chip[aria-pressed="true"] .cost { color: var(--color-accent-deep); }
 
 /* Status tags: small, uppercase, muted pastel. */
@@ -90,7 +90,7 @@ h1, h2, h3 { color: var(--color-ink); text-wrap: balance; }
 .tag-blue { background: var(--color-blue-tint); color: var(--color-blue-ink); }
 .tag-accent { background: var(--color-accent-tint); color: var(--color-accent-deep); }
 
-kbd { font-family: var(--font-mono); font-size: 11px; border: 1px solid var(--color-line); border-radius: 4px; background: var(--color-raised); padding: 1px 5px; }
+kbd { font-size: 11px; border: 1px solid var(--color-line); border-radius: 4px; background: var(--color-raised); padding: 1px 5px; }
 
 /* Graph stage */
 .react-flow { background: transparent !important; }
@@ -98,8 +98,8 @@ kbd { font-family: var(--font-mono); font-size: 11px; border: 1px solid var(--co
            border: 1px solid var(--color-line-strong); color: var(--color-ink); box-shadow: var(--shadow-hairline);
            transition: border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), opacity 200ms var(--ease-out), background 200ms var(--ease-out); }
 .rf-node .name { font-weight: 600; display: flex; align-items: center; gap: 6px; }
-.rf-node .meta { color: var(--color-muted); font-size: 11px; margin-top: 1px; font-family: var(--font-mono); }
-.rf-node.crown { border-color: var(--color-ink); border-width: 1.5px; }
+.rf-node .meta { color: var(--color-muted); font-size: 11px; margin-top: 1px; }
+.rf-node.crown { border-color: var(--color-accent); border-width: 1.5px; }
 .rf-node.start { border-style: dashed; }
 .rf-node.dim { opacity: 0.32; }
 .rf-node.on-route { border-color: var(--color-accent-soft); }
@@ -124,7 +124,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; border: 1px solid var(--co
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 .hero-light { position: absolute; inset: -40% -20% auto -20%; height: 70%; pointer-events: none; z-index: 0;
-              background: radial-gradient(60% 60% at 30% 40%, rgb(228 98 42 / 0.10), transparent 70%); filter: blur(20px); }
+              background: radial-gradient(60% 60% at 30% 40%, rgb(240 98 30 / 0.12), transparent 70%); filter: blur(20px); }
 
 @media (prefers-reduced-motion: reduce) {
   .rf-node.active { animation: none; }

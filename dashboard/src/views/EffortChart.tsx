@@ -39,7 +39,7 @@ export function EffortChart({ before, after }: { before: Result | null; after: R
       <ResponsiveContainer width="100%" height={190}>
         <BarChart data={data} barGap={-10} margin={{ top: 14, right: 4, left: -22, bottom: 0 }}>
           <CartesianGrid stroke="var(--color-line)" vertical={false} />
-          <XAxis dataKey="bucket" tick={{ fill: "var(--color-faint)", fontSize: 10, fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} />
+          <XAxis dataKey="bucket" tick={{ fill: "var(--color-faint)", fontSize: 10 }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fill: "var(--color-faint)", fontSize: 10 }} axisLine={false} tickLine={false} />
           <Tooltip cursor={{ fill: "var(--color-raised)" }} contentStyle={{ background: "var(--color-surface)", border: "1px solid var(--color-line)", borderRadius: 8, fontSize: 12 }} />
           <Bar dataKey="before" fill="var(--color-line-strong)" name="before" radius={[2, 2, 0, 0]} />

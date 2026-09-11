@@ -25,7 +25,7 @@ export function DecisionCard({ verdict, catalogue, onPick, onAdopt, onHighlight 
       <section className="card relative min-h-[460px] overflow-hidden p-8">
         <div className="hero-light" />
         <div className="relative">
-          <h2 className="display text-[40px]">Propose a change.</h2>
+          <h2 className="display text-[36px]">Propose a change.</h2>
           <p className="mt-3 max-w-[48ch] text-[15px] leading-relaxed text-muted">
             Pick controls above. You get the attacker's new route, the business flows the change would sever, the cost, how
             sure we are — and a verdict a change board can act on.
@@ -58,10 +58,10 @@ export function DecisionCard({ verdict, catalogue, onPick, onAdopt, onHighlight 
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <div className="label">Proposed change · cost {verdict.cost} · {o.agent_id} · {verdict.before.n} seeded trials</div>
-              <h2 className="display mt-2 text-[34px]">{verdict.control_ids.map(name).join(" + ")}</h2>
+              <h2 className="display mt-2 text-[30px]">{verdict.control_ids.map(name).join(" + ")}</h2>
             </div>
             <div className="shrink-0 text-right">
-              <div className="display text-[44px] leading-none text-ink">{v.word}</div>
+              <div className="display text-[40px] leading-none text-accent">{v.word}</div>
               <span className={`tag mt-2 ${v.tag}`}>{verdict.recommendation}</span>
             </div>
           </div>

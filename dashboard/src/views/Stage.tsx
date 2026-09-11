@@ -101,7 +101,7 @@ export function Stage({ graph, route, blast, replay, startZones, onSelectAsset }
       edges.push({
         id: "a:" + k, source: e.src, target: e.dst, animated: !!(hot || attempting),
         label: `${e.technique} · ${e.attck}${e.p_success < 0.5 ? ` · p ${e.p_success.toFixed(2)}` : ""}`,
-        labelStyle: { fill: hot || attempting ? "var(--color-accent-deep)" : "var(--color-faint)", fontSize: 9.5, fontWeight: 500, fontFamily: "var(--font-mono)" },
+        labelStyle: { fill: hot || attempting ? "var(--color-accent-deep)" : "var(--color-faint)", fontSize: 9.5, fontWeight: 500 },
         labelBgStyle: { fill: "var(--color-surface)", fillOpacity: 0.95 }, labelBgPadding: [4, 2], labelBgBorderRadius: 4,
         style: { stroke: color, strokeWidth: hot || attempting ? 2.5 : 1.3, opacity: focus && !hot && !attempting && !failed ? 0.28 : 1 },
         markerEnd: { type: MarkerType.ArrowClosed, color, width: 14, height: 14 },
@@ -109,7 +109,7 @@ export function Stage({ graph, route, blast, replay, startZones, onSelectAsset }
     });
     graph.flows.forEach((f) => edges.push({
       id: "f:" + f.id, source: f.src, target: f.dst, label: `${f.id} · ${f.protocol}/${f.port}`,
-      labelStyle: { fill: "var(--color-blue-ink)", fontSize: 9.5, fontFamily: "var(--font-mono)" }, labelBgStyle: { fill: "var(--color-surface)", fillOpacity: 0.95 },
+      labelStyle: { fill: "var(--color-blue-ink)", fontSize: 9.5 }, labelBgStyle: { fill: "var(--color-surface)", fillOpacity: 0.95 },
       style: { stroke: "var(--color-blue-ink)", strokeWidth: 1.3, strokeDasharray: "5 4", opacity: focus ? 0.25 : 0.7 },
     }));
     return { nodes, edges };
